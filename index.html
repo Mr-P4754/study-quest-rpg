@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>STUDY QUEST RPG</title>
+    <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="loading-screen" class="screen">
+    <div style="margin: auto; width: 100%; max-width: 400px;">
+        <div class="spinner"></div>
+        <h2 style="margin:0;">CONNECTING...</h2>
+        <div id="error-message"></div>
+    </div>
+</div>
+
+<div id="title-screen" class="screen title-screen-bg hidden">
+    <div id="campaign-banner" class="campaign-banner">
+        <div id="campaign-text" class="campaign-text"></div>
+    </div>
+    <div class="title-logo">STUDY QUEST</div>
+    <div class="version-text" onclick="openVersionHistory()">Ver 8.0.0</div>
+    
+    <div class="menu-btn-container">
+        <button id="btn-rogue-start" class="menu-btn full-width" style="background:linear-gradient(135deg, #d35400, #c0392b); border-bottom-color:#962d22; font-size:1.05em; grid-column: span 2;" onclick="startRogueMode()">
+            🧭 ローグライク探索モード
+        </button>
+
+        <button class="menu-btn" onclick="openUnitSelection()">▶ クエスト</button>
+        <button class="menu-btn" style="background:#e74c3c; border-color:#c0392b;" onclick="openSurvivalMenu()">🔥 サバイバル</button>
+        <button id="btn-revenge" class="menu-btn revenge" onclick="startRevengeMode()" disabled>
+            💀 リベンジ
+            <div id="revenge-badge" class="badge hidden">0</div>
+        </button>
+        <button class="menu-btn" style="background:#8e44ad; border-color:#6c3483;" onclick="openTypingMenu()">⌨️ タイピング</button>
+        <button class="menu-btn" style="background:#2c3e50; border-color:#1f618d;" onclick="openCalcMenu()">🧮 計算クエスト</button>
+        <button class="menu-btn" style="background:#7f8c8d; border-color:#636e72;" onclick="openRandomMenu()">🎲 ランダム</button>
+        <button class="menu-btn" style="background:#d35400; border-color:#a04000;" onclick="openMissions()">
+            📝 MISSION
+            <div id="mission-badge" class="badge hidden">!</div>
+        </button>
+        <button class="menu-btn multi-line" style="background:#e84393; border-color:#d63031;" onclick="openGacha()">
+            <span>💎 ガチャ</span>
+            <span>📖 図鑑</span>
+        </button>
+        <button class="menu-btn" style="background:#f39c12; border-color:#d35400;" onclick="openTitles()">
+            🏆 称号
+            <div id="title-badge" class="badge hidden">!</div>
+        </button>
+        <button class="menu-btn" style="background:#27ae60; border-color:#1e8449;" onclick="openShop()">🛒 ショップ</button>
+        <button class="menu-btn" style="background:#16a085; border-color:#1abc9c;" onclick="openRecord()">📊 成績表</button>
+        <button class="menu-btn" style="background:#3498db; border-color:#2980b9;" onclick="openSyncMenu()">☁️ クラウドセーブ</button>
+        <button class="menu-btn" style="background:#1abc9c; border-color:#16a085;" onclick="openHowToPlay()">📖 プレイガイド</button>
+        <button id="btn-gift" class="menu-btn" style="background:#ff6b81; border-color:#d63031;" onclick="openGiftMenu()" disabled>
+            🎁 ギフト
+            <div id="gift-badge" class="badge hidden">0</div>
+        </button>
+    </div>
+    
+    <div style="margin-top: 15px; padding-bottom: 20px; width: 100%; color: #95a5a6; font-size: 0.9em; display: flex; justify-content: center; align-items: center; gap: 10px;">
+        <div id="title-chara-img" style="width: 40px; height: 40px; background: #333; border-radius: 5px; overflow: hidden;"></div>
+        <div>装備: <span id="title-equipped-name" style="color:#fff; font-weight:bold;">なし</span><br>所持XP: <span id="title-xp" style="color:#f1c40f;">0</span></div>
+    </div>
+</div>
+
+<div id="field-screen" class="screen hidden" style="background-color: #1a252f; display:flex; flex-direction:column;">
+    <div class="header" style="background: #2c3e50; justify-content: space-around; padding: 0 10px;">
+        <div style="font-weight:bold; font-size:0.9em;">階層: <span id="rogue-floor" style="color:#f1c40f; font-size:1.2em;">1</span>F</div>
+        <div style="font-weight:bold; font-size:0.9em;">歩数: <span id="rogue-steps" style="color:#e74c3c; font-size:1.2em;">0/0</span></div>
+        <div style="font-weight:bold; font-size:0.9em;">探索Lv: <span id="rogue-explv" style="color:#2ecc71; font-size:1.2em;">1</span></div>
+        <div style="font-weight:bold; font-size:0.9em;">獲得XP: <span id="rogue-ctxp" style="color:#e67e22; font-size:1.2em;">0</span></div>
+    </div>
+    <div id="rogue-canvas-container" style="flex:1; display:flex; justify-content:center; align-items:center; width:100%; overflow:hidden; position:relative; background: #111;">
+        <canvas id="rogue-canvas"></canvas>
+    </div>
+    <div id="rogue-dpad" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin:15px auto; width:200px; height:140px; flex-shrink: 0;">
+        <div></div><button class="menu-btn" style="height:50px; padding:0; background:#34495e; border-bottom:4px solid #2c3e50;" onclick="moveRoguePlayer(0, -1)">▲</button><div></div>
+        <button class="menu-btn" style="height:50px; padding:0; background:#34495e; border-bottom:4px solid #2c3e50;" onclick="moveRoguePlayer(-1, 0)">◀</button>
+        <button class="menu-btn" style="height:50px; padding:0; background:#e74c3c; border-bottom:4px solid #c0392b;" onclick="escapeRogueConfirm()">帰還</button>
+        <button class="menu-btn" style="height:50px; padding:0; background:#34495e; border-bottom:4px solid #2c3e50;" onclick="moveRoguePlayer(1, 0)">▶</button>
+        <div></div><button class="menu-btn" style="height:50px; padding:0; background:#34495e; border-bottom:4px solid #2c3e50;" onclick="moveRoguePlayer(0, 1)">▼</button><div></div>
+    </div>
+</div>
+
+<div id="rogue-shop-overlay" class="overlay hidden" style="z-index: 290;">
+    <div class="modal">
+        <h2 style="color:#e67e22; margin-top:0;">🛍️ 中間ショップ</h2>
+        <div style="text-align:right; font-weight:bold; color:#2c3e50; margin-bottom:10px;">獲得XP: <span id="rogue-shop-xp" style="color:#e67e22;">0</span></div>
+        <div id="rogue-shop-list" style="flex: 1; overflow-y: auto; min-height: 0;"></div>
+        <button class="menu-btn" style="margin-top:20px; background:#95a5a6; border-color:#7f8c8d;" onclick="closeRogueShop()">探索に戻る</button>
+    </div>
+</div>
+
+<div id="unit-select-overlay" class="overlay hidden" style="z-index: 250;">
+    <div class="modal" style="max-width:400px;">
+        <h2 id="unit-select-title" style="color:#2c3e50; margin-top:0;">クエスト出発</h2>
+        <p style="font-size:0.9em; color:#7f8c8d;">挑戦する単元を選んでください</p>
+        <div style="background: #ecf0f1; padding: 15px; border-radius: 10px; margin: 15px 0; border: 2px solid #bdc3c7;">
+            <select id="grade-select" class="select-box" style="width:100%; margin-bottom:10px; font-size:1.1em;" onchange="filterSubjects()"><option value="">学年を選択</option></select>
+            <select id="subject-select" class="select-box" style="width:100%; margin-bottom:10px; font-size:1.1em;" onchange="filterUnits()"><option value="">教科を選択</option></select>
+            <select id="unit-select" class="select-box" style="width:100%; margin-bottom:10px; font-size:1.1em;"><option value="">単元を選択</option></select>
+            <select id="boss-hp-select" class="select-box" style="width:100%; margin-bottom:10px; font-size:1.1em;">
+                <option value="">ボスHPを選択</option><option value="1000">ボスHP: 1000</option><option value="2000">ボスHP: 2000</option>
+                <option value="3000">ボスHP: 3000</option><option value="4000">ボスHP: 4000</option><option value="5000">ボスHP: 5000</option>
+                <option value="10000">ボスHP: 10000</option>
+            </select>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <button class="menu-btn" style="background:#e67e22;" onclick="startNormalGameCheck()">通常出撃</button>
+            <button class="menu-btn oath" style="background:#8e44ad; border-color:#6c3483;" onclick="goToOathMenuCheck()">😈 誓約へ</button>
+        </div>
+        <button class="menu-btn" style="margin-top:15px; background:#95a5a6;" onclick="closeUnitSelection()">キャンセル</button>
+    </div>
+</div>
+
+<div id="survival-overlay" class="overlay hidden" style="z-index: 290;">
+    <div class="modal" style="max-width:350px;">
+        <h2 style="color:#e74c3c; margin-top:0;">🔥 サバイバル</h2>
+        <p style="font-size:0.9em; text-align:left;">体力が尽きるまで問題を解き続けるエンドレスモードです。<br><br>💎 <b>装備キャラが直接成長します</b></p>
+        <div style="margin: 20px 0;">
+            <label style="font-weight:bold; color:#2c3e50;">挑戦する学年</label>
+            <select id="survival-grade-select" class="select-box" style="width:100%; margin-top:5px; font-size:1.1em; padding:10px;"><option value="">学年を選択...</option></select>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <button class="menu-btn" style="background:#e74c3c;" onclick="oathOrigin='normal'; startSurvivalGame()">特訓開始</button>
+            <button class="menu-btn oath" style="background:#8e44ad; border-color:#6c3483;" onclick="goToOathMenuSurvivalCheck()">😈 誓約へ</button>
+        </div>
+        <button class="menu-btn" style="margin-top:10px; background:#95a5a6;" onclick="closeSurvivalMenu()">やめる</button>
+    </div>
+</div>
+
+<div id="sync-overlay" class="overlay hidden" style="z-index: 400;">
+    <div class="modal" style="max-width: 400px;">
+        <h2 style="color:#3498db; margin-top:0;">☁️ クラウドセーブ</h2>
+        <p style="text-align:left; font-size:0.9em;">この機能を使うと、スマホや別のPCにデータを引き継げます。</p>
+        <div style="background:#eee; padding:10px; border-radius:8px; margin:10px 0;">
+            <div style="font-weight:bold; color:#2c3e50;">あなたのID</div>
+            <div id="my-user-id" style="font-size:2em; font-weight:900; letter-spacing:2px; color:#3498db;">--------</div>
+            <button class="menu-btn" style="height:40px; font-size:0.9em; margin-top:5px; background:#2980b9;" onclick="uploadData()">☁️ このデータをクラウドに保存</button>
+        </div>
+        <hr style="margin:20px 0; border:1px dashed #ccc;">
+        <div style="text-align:left; font-size:0.9em; font-weight:bold; color:#e67e22;">データを読み込む (上書き注意)</div>
+        <input type="text" id="input-sync-id" placeholder="IDを入力 (例: a1b2c3d4)" style="width:90%; padding:10px; font-size:1.2em; border:2px solid #ccc; border-radius:5px; text-align:center; margin-top:5px;">
+        <button class="menu-btn" style="margin-top:10px; background:#e67e22;" onclick="downloadData()">📥 データをダウンロード</button>
+        <button class="menu-btn" style="margin-top:20px; background:#95a5a6;" onclick="closeSyncMenu()">閉じる</button>
+    </div>
+</div>
+
+<div id="game-screen" class="screen hidden">
+    <div class="header">
+        <div class="life-container" id="ui-life">❤️❤️❤️</div>
+        <div class="timer-container"><div id="ui-timer" class="timer-bar-fill"></div><div id="ui-timer-text">10.0</div></div>
+        <div class="stats-container"><div class="stats-box">SCORE <span id="ui-score">0</span></div><div class="stats-box">COMBO <span id="ui-combo" style="color:#f1c40f;">0</span></div></div>
+        <button class="header-pause-btn" onclick="togglePause()">⏸</button>
+    </div>
+    <div class="battle-area">
+        <div class="enemy-visual-box"><div class="enemy-visual" id="ui-enemy-icon">👾</div></div>
+        <div class="enemy-stats-row"><div id="ui-enemy-name">BOSS</div><div class="enemy-hp-frame"><div id="ui-hp" class="enemy-hp-fill"></div><div id="ui-hp-text">1000 / 1000</div></div></div>
+        <div id="ui-question" class="question-box" style="white-space: normal; overflow-wrap: break-word;">READY?</div>
+        
+        <div id="ui-typing-area" class="typing-area hidden">
+            <div id="ui-typing-jp" class="typing-japanese">日本語</div>
+            <div id="ui-typing-romaji" class="typing-romaji">ROMAJI</div>
+        </div>
+        <div id="ui-calc-progress" class="calc-progress hidden" style="margin:15px 0; color:#fff; font-size:0.95em; text-align:center;"></div>
+        <div id="calc-layout" class="calc-layout hidden">
+            <div id="ui-calc-answer" class="calc-answer" style="padding:15px; border-radius:10px; background:#2c3e50; color:#fff; font-size:1.8em; letter-spacing:0.1em; text-align:center; min-height:80px; display:flex; align-items:center; justify-content:center; box-sizing:border-box;">---</div>
+            <div id="calc-keypad" class="calc-keypad hidden">
+                <button class="menu-btn" style="background:#34495e;" onclick="handleCalcButton('7')">7</button><button class="menu-btn" style="background:#34495e;" onclick="handleCalcButton('8')">8</button><button class="menu-btn" style="background:#34495e;" onclick="handleCalcButton('9')">9</button>
+                <button class="menu-btn" style="background:#34495e;" onclick="handleCalcButton('4')">4</button><button class="menu-btn" style="background:#34495e;" onclick="handleCalcButton('5')">5</button><button class="menu-btn" style="background:#34495e;" onclick="handleCalcButton('6')">6</button>
+                <button class="menu-btn" style="background:#34495e;" onclick="handleCalcButton('1')">1</button><button class="menu-btn" style="background:#34495e;" onclick="handleCalcButton('2')">2</button><button class="menu-btn" style="background:#34495e;" onclick="handleCalcButton('3')">3</button>
+                <button class="menu-btn" style="background:#e74c3c;" onclick="handleCalcButton('C')">C</button><button class="menu-btn" style="background:#34495e;" onclick="handleCalcButton('0')">0</button><button class="menu-btn" style="background:#27ae60;" onclick="handleCalcButton('OK')">OK</button>
+            </div>
+        </div>
+    </div>
+    <div class="choices-grid" id="ui-choices"></div>
+    <div id="pause-overlay" class="overlay hidden">
+        <div class="pause-menu-box">
+            <h2 style="color:#f1c40f; margin:0;">PAUSE</h2>
+            <div id="pause-chara-info">装備情報を読み込み中...</div>
+            <button id="btn-mute" class="menu-btn" style="background:#95a5a6; border-color:#7f8c8d;" onclick="toggleMute()">🔇 音量: OFF</button>
+            <button class="menu-btn" style="background:#27ae60;" onclick="resumeGame()">つづきから</button>
+            <button class="menu-btn" style="background:#e67e22;" onclick="retryGame()">最初から</button>
+            <button class="menu-btn" style="background:#c0392b;" onclick="backToTitleFromPause()">タイトルへ</button>
+            <p class="pause-note">※「最初から」「タイトルへ」を選ぶと<br>このプレイで稼いだ経験値は<span style="color:#e74c3c">消滅</span>します。</p>
+        </div>
+    </div>
+</div>
+
+<div id="result-overlay" class="overlay hidden">
+    <div class="modal">
+        <h2 id="res-title">QUEST CLEAR!</h2>
+        <div id="res-icon" style="font-size: 4em;"></div>
+        <p>獲得スコア: <span id="res-score">0</span></p>
+        <div id="res-details" style="background:#f4f4f4; padding:12px; border-radius:10px; margin:10px 0; color:#333; font-size:0.95em;"></div>
+        <div id="res-drop" class="result-drop-box">入手アイテム: なし</div>
+        <div style="background:#eee; padding:15px; border-radius:10px; margin:10px 0;">
+            <div id="res-xp-label" style="font-size:1.1em; font-weight:bold; color:#7f8c8d; margin-bottom:5px;">獲得XP</div>
+            <div id="res-xp" style="color:#f1c40f; font-weight:900; font-size:2.5em; line-height:1.2;">+0</div>
+        </div>
+        <div id="res-rank" style="font-size:1.1em; font-weight:bold; color:#2c3e50; margin-bottom:10px;"></div>
+        <button class="menu-btn" onclick="handleResultClose()">OK</button>
+    </div>
+</div>
+
+<div id="login-bonus-overlay" class="overlay hidden" style="z-index: 300;"><div class="modal"><h2 style="color:#f1c40f; margin-top:0;">LOGIN BONUS</h2><div style="font-size:4em;">🎁</div><p style="margin:20px 0;">今日も学習お疲れ様です！<br>ログインボーナスを獲得しました。</p><div style="background:#fef5e7; padding:20px; border-radius:10px; border:2px solid #e67e22; margin-bottom:20px;"><div style="font-size:1.2em; font-weight:bold; color:#e67e22;">+30000 EXP</div></div><button class="menu-btn" style="width:100%;" onclick="closeLoginBonus()">受け取る</button></div></div>
+<div id="mission-overlay" class="overlay hidden" style="z-index: 250;"><div class="modal" style="max-width:500px;"><h2 style="color:#e74c3c; margin-top:0;">📝 DAILY MISSION</h2><div id="mission-list" class="mission-list" style="flex: 1; max-height: none; overflow-y: auto; min-height: 0;"></div><button class="menu-btn" style="margin-top:20px; font-size:1em; padding:10px; background:#95a5a6; border-color:#7f8c8d;" onclick="closeMissions()">閉じる</button></div></div>
+<div id="gacha-overlay" class="overlay hidden">
+    <div class="modal" style="max-width:500px;">
+        <h2 style="color:#8e44ad; margin-top:0;">文房具図鑑 & ガチャ</h2>
+        <div style="background:#f0f0f0; padding:10px; border-radius:10px; margin-bottom:15px; border: 2px solid #ccc;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-weight:bold; color:#2c3e50;">所持XP: <span id="gacha-xp" style="color:#f39c12;">0</span></span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <button onclick="rollGacha(1)" style="background:linear-gradient(to bottom, #3498db, #2980b9); border:none; padding:10px 5px; border-radius:15px; font-weight:bold; color:#fff; cursor:pointer; box-shadow: 0 3px 0 #1f618d; width:100%; font-size:0.95em; height:60px; line-height:1.2;">💎 3,000 XP<br><span style="font-size:0.8em; opacity:0.9;">通常 1回</span></button>
+                <button onclick="rollGacha(10)" style="background:linear-gradient(to bottom, #f1c40f, #f39c12); border:none; padding:10px 5px; border-radius:15px; font-weight:bold; color:#fff; cursor:pointer; box-shadow: 0 3px 0 #d35400; width:100%; font-size:0.95em; border: 2px solid white; height:60px; line-height:1.2;">💎 30,000 XP<br><span style="font-size:0.8em; opacity:0.9;">通常 10連</span></button>
+                <button onclick="rollGuaranteedTenGacha('SSR', 100000)" style="background:linear-gradient(to bottom, #e67e22, #d35400); border:none; padding:10px 5px; border-radius:15px; font-weight:bold; color:#fff; cursor:pointer; box-shadow: 0 3px 0 #a04000; width:100%; font-size:0.95em; border: 2px solid #f1c40f; height:60px; line-height:1.2;">👑 100,000 XP<br><span style="font-size:0.8em; opacity:0.9;">SSR確定 10連</span></button>
+                <button onclick="rollGuaranteedTenGacha('UR', 150000)" style="background:linear-gradient(to right, #8e44ad, #3498db); border:none; padding:10px 5px; border-radius:15px; font-weight:900; color:#fff; cursor:pointer; box-shadow: 0 3px 0 #5b2c6f; width:100%; font-size:0.95em; border: 2px solid #e056fd; text-shadow: 0 0 3px #e056fd; height:60px; line-height:1.2;">🌈 150,000 XP<br><span style="font-size:0.8em; opacity:0.9;">UR確定 10連</span></button>
+            </div>
+        </div>
+        <div style="text-align: right; margin-bottom: 5px;">
+            <select id="zukan-sort-select" class="select-box" style="width: auto; padding: 5px; font-size: 0.9em;" onchange="changeZukanSort()">
+                <option value="default">標準 (ID順)</option><option value="rarity_desc">レア度 (高い順)</option>
+                <option value="rarity_asc">レア度 (低い順)</option><option value="type">スキル属性順</option>
+                <option value="level">レベル順</option><option value="stock">在庫数順</option>
+            </select>
+        </div>
+        <div id="zukan-grid" style="flex: 1; overflow-y: auto; text-align: left; min-height: 0;"></div>
+        <button class="menu-btn" style="margin-top:20px; font-size:1em; padding:10px; background:#95a5a6; border-color:#7f8c8d;" onclick="closeGacha()">閉じる</button>
+    </div>
+</div>
+
+<div id="chara-detail-overlay" class="overlay hidden" style="z-index: 150;">
+    <div class="modal" style="max-width:350px;">
+        <div style="flex: 1; overflow-y: auto; width: 100%; padding: 5px;">
+            <h3 id="cd-name" style="margin:0; font-size:1.5em; color:#2c3e50;">キャラ名</h3>
+            <div class="rarity-SSR" id="cd-rarity" style="margin-bottom:10px;">SSR</div>
+            <img id="cd-img" src="" class="detail-img">
+            <div style="background:#f9f9f9; padding:10px; border-radius:8px; text-align:left; font-size:0.9em;">
+                <div class="detail-stat-row"><span>レベル</span><span id="cd-lv" style="font-weight:bold; color:#2980b9;">Lv.0 / 20</span></div>
+                <div class="detail-stat-row" style="align-items:center;"><span>EXP</span><div style="flex:1; margin-left:10px;"><div class="exp-bar-container"><div id="cd-exp-bar" class="exp-bar-fill"></div></div><div id="cd-exp-text" style="font-size:0.7em; text-align:right;">0 / 100</div></div></div>
+                <div class="detail-stat-row"><span>スキル</span><span id="cd-type">ATK</span></div>
+                <div class="detail-stat-row"><span>効果</span><span id="cd-val" style="font-weight:bold; color:#e74c3c;">x1.5</span></div>
+                <div class="detail-stat-row"><span>在庫数</span><span id="cd-stock" style="font-weight:bold;">0個</span></div>
+            </div>
+            <p id="cd-desc" style="font-size:0.8em; color:#7f8c8d; margin:10px 0; min-height:3em;">説明文</p>
+            <div class="detail-btn-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                <button class="detail-btn" style="background:#2ecc71; border-bottom: 5px solid #27ae60; grid-column: span 2;" onclick="equipCurrentChara()">🛡️ このキャラを装備</button>
+                <button id="btn-enhance" class="detail-btn" style="background:#e67e22; border-bottom: 5px solid #d35400;" onclick="openEnhanceMenu()">🔥 強化合成</button>
+                <button id="btn-sell" class="detail-btn" style="background:#95a5a6; border-bottom: 5px solid #7f8c8d;" onclick="sellCharaStock()">💰 素材売却</button>
+            </div>
+            <div id="evo-container" class="evo-btn-container hidden" style="margin-top: 10px;"></div>
+            <button class="menu-btn" style="margin-top:20px; background:#bdc3c7; border-bottom:5px solid #95a5a6; color:#2c3e50; font-size: 0.9em; height: 45px; width: 100%;" onclick="closeCharaDetail()">閉じる</button>
+        </div>
+    </div>
+</div>
+
+<div id="material-select-overlay" class="overlay hidden" style="z-index: 160;">
+    <div class="modal" style="max-width:350px;">
+        <h3 style="margin:0; color:#e67e22;">強化素材を選択</h3>
+        <div id="material-list" class="material-list" style="flex: 1; overflow-y: auto; min-height: 0; padding: 5px; margin: 10px 0;"></div>
+        <div class="enhance-footer">
+            <div class="enhance-info"><span>獲得EXP: <span id="enhance-total-exp">0</span></span><span id="enhance-lv-preview" class="enhance-preview">Lv.そのまま</span></div>
+            <button class="menu-btn" style="background:#e67e22; margin:0;" onclick="executeBulkEnhance()">強化する</button>
+            <button class="menu-btn" style="background:#bdc3c7; border-color:#95a5a6; font-size:0.9em; padding:8px; margin-top:5px;" onclick="closeEnhanceMenu()">戻る</button>
+        </div>
+    </div>
+</div>
+
+<div id="gacha-result-overlay" class="overlay hidden"><div class="modal" style="max-width:400px;"><div id="gr-container"></div><button class="menu-btn" style="margin-top:20px;" onclick="closeGachaResult()">OK</button></div></div>
+<div id="shop-overlay" class="overlay hidden"><div class="modal"><h2 style="color:#27ae60;">🛒 学習アイテム</h2><div style="text-align:right;">所持XP: <span id="shop-xp">0</span></div><div id="shop-list" style="flex: 1; overflow-y: auto; min-height: 0;"></div><button class="menu-btn" style="margin-top:20px;" onclick="closeShop()">閉じる</button></div></div>
+
+<div id="gift-overlay" class="overlay hidden" style="z-index: 350;">
+    <div class="modal" style="max-width:400px;">
+        <h2 style="color:#e67e22; margin-top:0;">🎁 ギフトボックス</h2>
+        <p style="font-size:0.9em;">運営からのプレゼントが届いています！</p>
+        <div id="gift-list" class="gift-list"></div>
+        <button class="menu-btn" style="margin-top:20px; background:#27ae60;" onclick="receiveAllGifts()">まとめて受け取る</button>
+        <button class="menu-btn" style="margin-top:10px; background:#95a5a6;" onclick="closeGiftMenu()">閉じる</button>
+    </div>
+</div>
+
+<div id="titles-overlay" class="overlay hidden" style="z-index: 260;">
+    <div class="modal" style="max-width:500px;">
+        <h2 style="color:#f39c12; margin-top:0;">🏆 称号リスト</h2>
+        <div id="titles-list" style="flex: 1; overflow-y: auto; min-height: 0;"></div>
+        <button class="menu-btn" style="margin-top:20px; font-size:1em; padding:10px; background:#95a5a6; border-color:#7f8c8d;" onclick="closeTitles()">閉じる</button>
+    </div>
+</div>
+
+<div id="record-overlay" class="overlay hidden" style="z-index: 280;">
+    <div class="modal" style="max-width:400px;">
+        <h2 style="color:#8e44ad; margin-top:0;">📊 学力レポート</h2>
+        <div style="flex: 1; overflow-y: auto; width: 100%; padding: 5px;">
+            <div class="record-container">
+                <div class="chart-box"><canvas id="radar-chart" width="260" height="260"></canvas></div>
+                <table class="grade-table">
+                    <thead><tr><th>教科</th><th>正答率</th><th>ランク</th></tr></thead>
+                    <tbody id="grade-tbody"></tbody>
+                </table>
+                <div style="margin-top:20px; padding:15px; background:#f5f5ff; border-radius:10px; border:1px solid #dcdcff;">
+                    <div style="font-weight:bold; color:#2c3e50; margin-bottom:10px;">🧠 計算クエスト記録</div>
+                    <div id="calc-record-list" style="font-size:0.9em; color:#34495e;"></div>
+                </div>
+            </div>
+        </div>
+        <button class="menu-btn" style="margin-top:10px; background:#95a5a6;" onclick="closeRecord()">閉じる</button>
+    </div>
+</div>
+
+<div id="oath-overlay" class="overlay hidden" style="z-index: 290;">
+    <div class="modal" style="max-width:400px;">
+        <h2 id="oath-title" style="color:#8e44ad; margin-top:0;">😈 誓約の儀</h2>
+        <p id="oath-desc" style="font-size:0.9em;">自らにハンデを課し、高みを目指せ。<br>（報酬EXP <span style="color:#e67e22; font-weight:bold;">1.5〜2.0倍</span>）</p>
+        <div class="oath-options">
+            <div class="oath-option" id="oath-rapid" onclick="toggleOath('rapid')">
+                <div class="oath-icon">⏱️</div><div><div class="oath-name">迅速の誓約</div><div class="oath-desc">制限時間が半分になる</div></div>
+            </div>
+            <div class="oath-option" id="oath-backwater" onclick="toggleOath('backwater')">
+                <div class="oath-icon">💔</div><div><div class="oath-name">背水の誓約</div><div class="oath-desc">ライフが「1」になる</div></div>
+            </div>
+            <div class="oath-option" id="oath-weak" onclick="toggleOath('weak')">
+                <div class="oath-icon">⚔️</div><div><div class="oath-name">非力の誓約</div><div class="oath-desc">攻撃力が半分になる</div></div>
+            </div>
+        </div>
+        <button class="menu-btn" style="background:#8e44ad;" onclick="startOathGame()">この条件で出撃</button>
+        <button class="menu-btn" style="margin-top:10px; background:#95a5a6;" onclick="closeOathMenu()">やめる</button>
+    </div>
+</div>
+
+<div id="random-overlay" class="overlay hidden" style="z-index: 290;">
+    <div class="modal" style="max-width:350px;">
+        <h2 style="color:#34495e; margin-top:0;">🎲 未知の迷宮</h2>
+        <p style="font-size:0.9em; text-align:left;">学年のみを指定し、全範囲からランダムに出題される問題に挑戦します。<br><br>🔥 <b>報酬EXP 1.5倍</b></p>
+        <div style="margin: 20px 0;">
+            <label style="font-weight:bold; color:#2c3e50;">挑戦する学年</label>
+            <select id="random-grade-select" class="select-box" style="width:100%; margin-top:5px; font-size:1.1em; padding:10px;"><option value="">学年を選択...</option></select>
+        </div>
+        <button class="menu-btn" style="background:#34495e;" onclick="startRandomGame()">探索開始</button>
+        <button class="menu-btn" style="margin-top:10px; background:#95a5a6;" onclick="closeRandomMenu()">やめる</button>
+    </div>
+</div>
+
+<div id="typing-menu-overlay" class="overlay hidden" style="z-index: 290;">
+    <div class="modal" style="max-width:400px;">
+        <h2 style="color:#8e44ad; margin-top:0;">⌨️ タイピングクエスト</h2>
+        <div style="background:#fdedec; border:2px solid #e74c3c; padding:10px; border-radius:8px; margin-bottom:15px;">
+            <div style="font-weight:bold; color:#c0392b;">⚠️ PC・キーボード専用</div>
+            <div style="font-size:0.85em; text-align:left; margin-top:5px; color:#c0392b;">このモードは物理キーボードが必要です。<br>スマホ・タブレットのフリック入力では動作しません。</div>
+        </div>
+        <div style="margin: 15px 0;">
+            <label style="font-weight:bold; color:#2c3e50;">挑戦する学年</label>
+            <select id="typing-grade-select" class="select-box" style="width:100%; margin-top:5px; font-size:1.1em; padding:10px;"><option value="">学年を選択...</option></select>
+        </div>
+        <button class="menu-btn" style="background:#8e44ad;" onclick="startTypingGame()">キーボードで出撃</button>
+        <button class="menu-btn" style="margin-top:10px; background:#95a5a6;" onclick="closeTypingMenu()">やめる</button>
+    </div>
+</div>
+
+<div id="calc-overlay" class="overlay hidden" style="z-index: 290;">
+    <div class="modal" style="max-width:420px;">
+        <h2 style="color:#2c3e50; margin-top:0;">🧮 計算クエスト</h2>
+        <p style="font-size:0.9em; color:#7f8c8d; text-align:left;">計算形式を選択し、100問 or 3分間のタイムアタックに挑戦します。</p>
+        <div style="margin: 15px 0;">
+            <label style="font-weight:bold; color:#2c3e50;">問題形式</label>
+            <select id="calc-type-select" class="select-box" style="width:100%; margin-top:5px; font-size:1.1em; padding:10px;">
+                <option value="">形式を選択</option><option value="addition">たし算</option><option value="subtraction">ひき算</option>
+                <option value="multiplication">かけ算</option><option value="division">割り算（あまりなし）</option>
+                <option value="division_remainder">割り算（あまりあり）</option><option value="random">ランダム</option>
+            </select>
+        </div>
+        <div style="margin: 15px 0;">
+            <label style="font-weight:bold; color:#2c3e50;">タイムアタック</label>
+            <select id="calc-mode-select" class="select-box" style="width:100%; margin-top:5px; font-size:1.1em; padding:10px;">
+                <option value="">モードを選択</option><option value="100q">100問タイムアタック</option><option value="3min">3分間タイムアタック</option>
+            </select>
+        </div>
+        <div style="margin: 15px 0;">
+            <label style="font-weight:bold; color:#2c3e50; display:block; margin-bottom:5px;">利き手</label>
+            <div style="display:flex; gap:10px;">
+                <label style="flex:1; background:#ecf0f1; border-radius:10px; padding:10px; display:flex; align-items:center; gap:8px; cursor:pointer; color:#2c3e50;"><input type="radio" name="calc-hand" value="left" style="transform:scale(1.1);"> 左利き</label>
+                <label style="flex:1; background:#ecf0f1; border-radius:10px; padding:10px; display:flex; align-items:center; gap:8px; cursor:pointer; color:#2c3e50;"><input type="radio" name="calc-hand" value="right" checked style="transform:scale(1.1);"> 右利き</label>
+            </div>
+        </div>
+        <button class="menu-btn" style="background:#2c3e50;" onclick="startCalcGame()">挑戦を開始する</button>
+        <button class="menu-btn" style="margin-top:10px; background:#95a5a6;" onclick="closeCalcMenu()">やめる</button>
+    </div>
+</div>
+
+<div id="version-overlay" class="overlay hidden" style="z-index: 300;">
+    <div class="modal" style="max-width:500px;">
+        <h2 style="color:#3498db; margin-top:0;">📋 更新履歴</h2>
+        <div class="version-list" style="text-align:left; max-height:300px; overflow-y:auto;">
+            <h4>Ver 8.0.0</h4>
+            <ul>
+                <li>新モード「🧭 ローグライク探索モード」実装</li>
+                <li>歩数制限付きの自動生成マップとインフレ成長システムを追加</li>
+                <li>探索専用の一時XP管理と中間バフショップ機能の実装</li>
+            </ul>
+        </div>
+        <button class="menu-btn" style="margin-top:15px; background:#95a5a6; border-bottom-color:#7f8c8d;" onclick="closeVersionHistory()">閉じる</button>
+    </div>
+</div>
+
+<div id="howto-overlay" class="overlay hidden" style="z-index: 300;">
+    <div class="modal" style="max-width:500px;">
+        <h2 style="color:#1abc9c; margin-top:0;">📖 プレイガイド</h2>
+        <div class="version-list">
+            <h4 style="background:#ecf0f1; padding:5px; border-left:5px solid #d35400; margin:0 0 5px;">🧭 ローグライク探索</h4>
+            <ul style="padding-left:20px; margin:5px 0;">
+                <li>限られた歩数で階層を降りていくモードです。</li>
+                <li>マップ内のギミック（泉、毒の沼、罠など）を踏むとステータスが変動します。</li>
+                <li>敵マスに触れるとバトル開始。勝利すると<b>探索専用のXP</b>を獲得！</li>
+                <li>5階層ごとのショップでバフを購入し、さらに深く潜りましょう。</li>
+                <li>探索終了時、手元に残ったXPが正式な経験値として加算されます。</li>
+            </ul>
+
+            <h4 style="background:#ecf0f1; padding:5px; border-left:5px solid #2ecc71; margin:15px 0 5px;">⚔️ 基本ルール</h4>
+            <ul style="padding-left:20px; margin:5px 0;">
+                <li>制限時間内に正解を選んでボスを攻撃！</li>
+                <li><b>コンボ</b>を繋ぐとダメージアップ！</li>
+                <li>ライフが0になるとゲームオーバー。ライフは3つあります。</li>
+            </ul>
+            
+            <h4 style="background:#ecf0f1; padding:5px; border-left:5px solid #e74c3c; margin:15px 0 5px;">🔥 サバイバル・ダンジョン</h4>
+            <ul style="padding-left:20px; margin:5px 0;">
+                <li>体力が尽きるまで解き続けるエンドレス特訓モードです。</li>
+                <li>1問正解するごとに、残り時間が<b>「+5秒」回復</b>します。</li>
+                <li>サバイバルでは<b>「装備しているキャラクター」に直接経験値が入ります！</b></li>
+            </ul>
+        </div>
+        <button class="menu-btn" style="margin-top:15px; background:#95a5a6; border-bottom-color:#7f8c8d;" onclick="closeHowToPlay()">閉じる</button>
+    </div>
+</div>
+
+<div id="app-modal-overlay" class="overlay hidden" style="z-index: 800;">
+    <div class="modal" style="padding: 20px; max-width: 420px;">
+        <div id="app-modal-message" style="white-space: pre-wrap; color: #2c3e50; text-align: left; min-height: 70px; margin-bottom: 20px;"></div>
+        <div id="app-modal-buttons" style="display:flex; justify-content:center; gap:10px; flex-wrap: wrap;">
+            <button id="app-modal-ok" class="menu-btn" style="width: calc(50% - 5px);">OK</button>
+            <button id="app-modal-cancel" class="menu-btn" style="width: calc(50% - 5px);">キャンセル</button>
+        </div>
+    </div>
+</div>
+    
+    <script src="app-data.js"></script>
+    <script src="app-main.js"></script>
+    <script src="app-game.js"></script>
+    <script src="app-ui.js"></script>
+    <script src="app-rogue.js"></script>
+
+</body>
+</html>
