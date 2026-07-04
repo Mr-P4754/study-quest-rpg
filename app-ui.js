@@ -832,3 +832,18 @@ function renderTypingUI() {
         romajiBox.innerHTML = `<span class="typing-char-done">${done}</span><span class="typing-char-current">${cur || ''}</span><span class="typing-char-rest">${rest}</span>`;
     }
 }
+
+// =====================================
+// 追加: ローグライクメニュー開閉
+// =====================================
+function openRogueMenu() {
+    if(!rawData.questions) return;
+    const grades = [...new Set(rawData.questions.map(q => q.grade))].filter(g=>g);
+    const sel = document.getElementById('rogue-grade-select'); 
+    if(sel) {
+        sel.innerHTML = '<option value="">学年を選択...</option>';
+        grades.forEach(g => sel.innerHTML += `<option value="${g}">${g}</option>`);
+    }
+    document.getElementById('rogue-menu-overlay')?.classList.remove('hidden');
+}
+function closeRogueMenu() { document.getElementById('rogue-menu-overlay')?.classList.add('hidden'); }
