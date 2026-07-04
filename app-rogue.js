@@ -15,7 +15,7 @@ let rogueData = {
     exploreLevel: 1,
     atkBuff: 1.0,
     active: false,
-    tileSize: 32
+    tileSize: 32,
     isAnimating: false,
     shopBought: false
 };
@@ -177,6 +177,7 @@ function triggerRogueRNGEvent() {
         processRogueTile(g);
     }
 }
+
 // processRogueTile 関数内の修正（階段マスの処理変更）
 function processRogueTile(tile) {
     switch (tile) {
@@ -209,57 +210,6 @@ function processRogueTile(tile) {
             triggerRogueShop();
             break;
     }
-}
-function triggerRogueBattle() {
-    const baseHp = 3000;
-    const rate = 1.0 + (rogueData.floor * 0.15);
-    const calculatedHp = Math.floor(baseHp * rate);
-
-    // 学年選択で保存した問題プールを使用
-    let qList = [...playData.rogueQuestions].sort(() => Math.random() - 0.5);
-    
-    playData.questions = qList;
-    playData.qIndex = 0;
-    playData.currentBoss = { name: `${rogueData.floor}F 守護モンスター`, hp: calculatedHp, icon: "👾" };
-    playData.isRevenge = false;
-    playData.activeOaths = [];
-    playData.isRandom = false;
-    playData.isTyping = false;
-    playData.isCalculation = false;
-    playData.isSurvival = false;
-    playData.context = null;
-
-    gameState.score = 0;
-    gameState.combo = 0;
-    gameState.enemyHP = calculatedHp;
-    gameState.maxHP = calculatedHp;
-    
-    const charaStats = getCharaStats();
-    gameState.maxTime = 10 * charaStats.time;
-    gameState.timeLeft = gameState.maxTime; 
-
-    isGameActive = false;
-    isPaused = false;
-
-    document.getElementById('field-screen').classList.add('hidden');
-    document.getElementById('game-screen').classList.remove('hidden');
-
-    const uienemyName = document.getElementById('ui-enemy-name');
-    if (uienemyName) uienemyName.innerText = playData.currentBoss.name;
-    const enemyIcon = document.getElementById('ui-enemy-icon');
-    if (enemyIcon) { enemyIcon.innerHTML = "👾"; enemyIcon.classList.remove('shake-anim'); }
-    
-    const enemyBox = document.querySelector('.enemy-visual-box');
-    if(enemyBox) enemyBox.classList.remove('anim-paused', 'fade-out');
-    const hpFrame = document.querySelector('.enemy-hp-frame');
-    if (hpFrame) hpFrame.style.display = '';
-    const timerBar = document.getElementById('ui-timer'); 
-    if(timerBar) timerBar.style.width = '100%'; 
-    const timerText = document.getElementById('ui-timer-text'); 
-    if(timerText) timerText.innerText = gameState.maxTime.toFixed(1);
-
-    updateUI();
-    startCountdown();
 }
 
 function triggerRogueShop() {
@@ -340,6 +290,7 @@ function buyRogueSteps(price) {
     renderRogueShopContents();
     updateRogueUI();
 }
+
 function updateRogueUI() {
     const l = document.getElementById('rogue-life');
     if (l) l.innerText = '❤️'.repeat(Math.max(0, gameState.lives));
