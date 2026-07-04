@@ -358,7 +358,7 @@ function addCalcRecord(entry) {
 }
 
 function finishGame(isClear) { 
-    // ローグライクモードでのバトルの場合はネイティブにフックを吸収する
+    // 【変更】ローグライク探索中なら専用の勝利/敗北処理へ分岐
     if (typeof rogueData !== 'undefined' && rogueData.active) {
         isGameActive = false; clearInterval(gameState.timer);
         document.removeEventListener('keydown', handleTypingInput);
@@ -372,12 +372,35 @@ function finishGame(isClear) {
             const earned = Math.floor((baseReward + floorBonus) * stats.exp * (1.0 + rogueData.exploreLevel * 0.1));
             
             rogueData.earnedXp += earned;
+
+            // 【追加】撃破したキャラをインベントリに追加
+            const charId = playData.rogueEnemyCharId;
+            let getMsg = "";
+            if (charId) {
+                if (!gameState.charaInventory[charId]) {
+                    const c = rawData.characters.find(x => x.id == charId);
+                    gameState.charaInventory[charId] = { level: 1, count: 1, exp: 0, currentRarity: c ? c.rarity : 'N' };
+                } else {
+                    gameState.charaInventory[charId].count++;
+                }
+                const cName = rawData.characters.find(x => x.id == charId)?.name || "キャラ";
+                getMsg = `\nさらに「${cName}」を1体獲得！`;
+            }
+
             if (typeof updateRogueUI === 'function') updateRogueUI();
 
-            showAppModal(`戦闘勝利！\n探索中の一時変数に +${earned} XP 獲得しました。`, 'alert').then(() => {
+            showAppModal(`戦闘勝利！\n探索中の一時XPに +${earned} 獲得しました。${getMsg}`, 'alert').then(() => {
                 document.getElementById('game-screen')?.classList.add('hidden');
                 document.getElementById('field-screen')?.classList.remove('hidden');
-                if (typeof drawRogueMap === 'function') drawRogueMap();
+                
+                // 【追加】ボス戦だった場合は階層を進める
+                if (rogueData.isBossBattle) {
+                    rogueData.floor++;
+                    showCutIn(`階層クリア 次へ`);
+                    generateRogueFloor();
+                } else {
+                    if (typeof drawRogueMap === 'function') drawRogueMap();
+                }
             });
         } else {
             playSE('lose');
