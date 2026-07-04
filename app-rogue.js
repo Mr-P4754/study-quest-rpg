@@ -122,6 +122,8 @@ function drawRogueMap() {
 }
 
 function moveRoguePlayer(dx, dy) {
+    if (rogueData.isAnimating) return;
+
     const nx = rogueData.playerX + dx;
     const ny = rogueData.playerY + dy;
 
@@ -158,54 +160,56 @@ function moveRoguePlayer(dx, dy) {
 // 新規追加: ランダムエンカウントロジック
 function triggerRogueRNGEvent() {
     let eventChance = Math.min(0.8, 0.1 + (rogueData.floor * 0.05));
-    if (Math.random() > eventChance) return;
+    if (Math.random() > eventChance) return; 
 
     let enemyChance = Math.min(0.8, 0.3 + (rogueData.floor * 0.05));
     
     if (Math.random() < enemyChance) {
-        showCutIn("⚠️敵出現");
-        // 【変更】通常エンカウントであることを示すため false を渡す
-        setTimeout(() => triggerRogueBattle(false), 800);
+        rogueData.isAnimating = true; // 敵出現時は操作をロック
+        showCutIn("敵出現⚠️");
+        setTimeout(() => {
+            rogueData.isAnimating = false; // ロック解除してバトル開始
+            triggerRogueBattle(false);
+        }, 800);
     } else {
         const gimmicks = [ROGUE_TILES.FOUNTAIN, ROGUE_TILES.BOOK, ROGUE_TILES.TRAP, ROGUE_TILES.STATUE, ROGUE_TILES.CURSE];
         const g = gimmicks[Math.floor(Math.random() * gimmicks.length)];
         processRogueTile(g);
     }
 }
-
 // processRogueTile 関数内の修正（階段マスの処理変更）
 function processRogueTile(tile) {
     switch (tile) {
         case ROGUE_TILES.STAIRS:
-            // 【変更】階段を踏んだら階層ボス戦を発生させる
+            showCutIn(`${rogueData.floor}階クリア🎉`);
+            rogueData.floor++;
             triggerRogueBattle(true);
             break;
         case ROGUE_TILES.FOUNTAIN:
             gameState.lives = Math.min(3, gameState.lives + 1);
-            showCutIn("❤️ライフ回復");
+            showCutIn("ライフ❤️ +1");
             break;
         case ROGUE_TILES.BOOK:
             rogueData.exploreLevel++;
-            showCutIn("📜探索レベルUP");
+            showCutIn("探索レベル📜UP");
             break;
         case ROGUE_TILES.TRAP:
             rogueData.exploreLevel = Math.max(1, rogueData.exploreLevel - 1);
-            showCutIn("🕸️忘却の罠 レベルDOWN");
+            showCutIn("探索レベル📜DOWN");
             break;
         case ROGUE_TILES.STATUE:
             rogueData.atkBuff += 0.3;
-            showCutIn("🗿剣の像 攻撃力UP");
+            showCutIn("攻撃力⚔️ +30％");
             break;
         case ROGUE_TILES.CURSE:
             rogueData.atkBuff = Math.max(0.1, rogueData.atkBuff - 0.2);
-            showCutIn("💀呪い 攻撃力DOWN");
+            showCutIn("攻撃力⚔️ -20％");
             break;
         case ROGUE_TILES.SHOP:
             triggerRogueShop();
             break;
     }
 }
-
 function triggerRogueBattle() {
     const baseHp = 3000;
     const rate = 1.0 + (rogueData.floor * 0.15);
@@ -289,7 +293,9 @@ function renderRogueShopContents() {
     ];
 
     rogueItems.forEach(item => {
-        const canBuy = rogueData.earnedXp >= item.price;
+        // 購入済みか、XPが足りない場合はボタンを無効化
+        const canBuy = !rogueData.shopBought && (rogueData.earnedXp >= item.price);
+        const btnText = rogueData.shopBought ? '品切れ' : `⬇️ ${item.price}XP`;
         list.innerHTML += `
             <div class="shop-item">
                 <div class="shop-icon">${item.icon}</div>
@@ -298,7 +304,7 @@ function renderRogueShopContents() {
                     <div class="shop-desc">${item.desc}</div>
                 </div>
                 <div class="shop-right">
-                    <button class="shop-buy-btn" ${canBuy ? '' : 'disabled'} onclick="${item.action}(${item.price})">⬇️ ${item.price}XP</button>
+                    <button class="shop-buy-btn" ${canBuy ? '' : 'disabled'} onclick="${item.action}(${item.price})">${btnText}</button>
                 </div>
             </div>
         `;
@@ -306,8 +312,9 @@ function renderRogueShopContents() {
 }
 
 function buyRogueHeal(price) {
-    if (rogueData.earnedXp < price) return;
+    if (rogueData.shopBought || rogueData.earnedXp < price) return;
     rogueData.earnedXp -= price;
+    rogueData.shopBought = true; // 購入済みにする
     gameState.lives = Math.min(3, gameState.lives + 1);
     playSE('hit');
     renderRogueShopContents();
@@ -315,8 +322,9 @@ function buyRogueHeal(price) {
 }
 
 function buyRogueAtk(price) {
-    if (rogueData.earnedXp < price) return;
+    if (rogueData.shopBought || rogueData.earnedXp < price) return;
     rogueData.earnedXp -= price;
+    rogueData.shopBought = true;
     rogueData.atkBuff += 0.5;
     playSE('hit');
     renderRogueShopContents();
@@ -324,14 +332,14 @@ function buyRogueAtk(price) {
 }
 
 function buyRogueSteps(price) {
-    if (rogueData.earnedXp < price) return;
+    if (rogueData.shopBought || rogueData.earnedXp < price) return;
     rogueData.earnedXp -= price;
+    rogueData.shopBought = true;
     rogueData.steps += 10;
     playSE('hit');
     renderRogueShopContents();
     updateRogueUI();
 }
-
 function updateRogueUI() {
     const l = document.getElementById('rogue-life');
     if (l) l.innerText = '❤️'.repeat(Math.max(0, gameState.lives));
