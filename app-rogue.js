@@ -16,6 +16,8 @@ let rogueData = {
     atkBuff: 1.0,
     active: false,
     tileSize: 32
+    isAnimating: false,
+    shopBought: false
 };
 
 const ROGUE_TILES = {
@@ -38,6 +40,8 @@ function startRogueMode() {
     rogueData.exploreLevel = 1;
     rogueData.atkBuff = 1.0;
     rogueData.active = true;
+    rogueData.isAnimating = false;
+    rogueData.shopBought = false;
     gameState.lives = 3; 
     
     document.getElementById('rogue-menu-overlay')?.classList.add('hidden');
