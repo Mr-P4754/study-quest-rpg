@@ -86,6 +86,7 @@ function generateRogueFloor() {
     updateRogueUI();
     drawRogueMap();
 }
+
 function drawRogueMap() {
     const canvas = document.getElementById('rogue-canvas');
     if (!canvas) return;
