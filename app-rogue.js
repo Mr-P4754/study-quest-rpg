@@ -151,31 +151,28 @@ function moveRoguePlayer(dx, dy) {
 
 // 新規追加: ランダムエンカウントロジック
 function triggerRogueRNGEvent() {
-    // 発生確率: 序盤は低く、階層ごとに5%ずつ上昇 (最大80%)
     let eventChance = Math.min(0.8, 0.1 + (rogueData.floor * 0.05));
-    if (Math.random() > eventChance) return; // 何も起こらない
+    if (Math.random() > eventChance) return;
 
-    // イベント発生時の敵出現確率: 序盤30%〜階層ごとに5%上昇 (最大80%)
     let enemyChance = Math.min(0.8, 0.3 + (rogueData.floor * 0.05));
     
     if (Math.random() < enemyChance) {
         showCutIn("⚠️敵出現");
-        setTimeout(() => triggerRogueBattle(), 800);
+        // 【変更】通常エンカウントであることを示すため false を渡す
+        setTimeout(() => triggerRogueBattle(false), 800);
     } else {
-        // バフ・デバフの獲得 (SWAMPは除外)
         const gimmicks = [ROGUE_TILES.FOUNTAIN, ROGUE_TILES.BOOK, ROGUE_TILES.TRAP, ROGUE_TILES.STATUE, ROGUE_TILES.CURSE];
         const g = gimmicks[Math.floor(Math.random() * gimmicks.length)];
         processRogueTile(g);
     }
 }
 
-// processRogueTile から SWAMP の分岐を削除
+// processRogueTile 関数内の修正（階段マスの処理変更）
 function processRogueTile(tile) {
     switch (tile) {
         case ROGUE_TILES.STAIRS:
-            rogueData.floor++;
-            showCutIn(`階層クリア 次へ`);
-            generateRogueFloor();
+            // 【変更】階段を踏んだら階層ボス戦を発生させる
+            triggerRogueBattle(true);
             break;
         case ROGUE_TILES.FOUNTAIN:
             gameState.lives = Math.min(3, gameState.lives + 1);
@@ -368,4 +365,106 @@ function exitRogueSystem(success) {
     }
     
     if (typeof updateTitleInfo === 'function') updateTitleInfo();
+}
+
+function getRogueEnemyChar(isBoss, floor) {
+    let rarity = 'N';
+    if (isBoss) {
+        if (floor % 100 === 0) rarity = 'UR';
+        else if (floor % 50 === 0) rarity = 'SSR';
+        else if (floor % 5 === 0) rarity = 'SR';
+        else rarity = 'R';
+    } else {
+        const rand = Math.random();
+        if (rand < 0.01) rarity = 'UR';
+        else if (rand < 0.05) rarity = 'SSR';
+        else if (rand < 0.20) rarity = 'SR';
+        else if (rand < 0.50) rarity = 'R';
+        else rarity = 'N';
+    }
+    
+    let pool = rawData.characters.filter(c => c.rarity === rarity);
+    if (!pool || pool.length === 0) pool = rawData.characters; // フォールバック
+    return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// 【変更】triggerRogueBattle 全体を以下に差し替え
+function triggerRogueBattle(isBoss = false) {
+    rogueData.isBossBattle = isBoss;
+    const enemyChar = getRogueEnemyChar(isBoss, rogueData.floor);
+    playData.rogueEnemyCharId = enemyChar.id;
+
+    // HP倍率の計算
+    let hpMultiplier = 1.0;
+    if (isBoss) {
+        if (rogueData.floor % 5 === 0) hpMultiplier = 1.5;
+        else hpMultiplier = 1.25;
+    }
+    const calculatedHp = Math.floor(1000 * Number(enemyChar.value || 1.0) * hpMultiplier);
+
+    let qList = [...playData.rogueQuestions].sort(() => Math.random() - 0.5);
+    
+    playData.questions = qList;
+    playData.qIndex = 0;
+
+    let bossName = isBoss ? `${rogueData.floor}F ボス: ${enemyChar.name}` : enemyChar.name;
+    let iconUrl = (enemyChar.imageUrl && enemyChar.imageUrl.startsWith('http')) ? enemyChar.imageUrl : "👾";
+
+    playData.currentBoss = { name: bossName, hp: calculatedHp, icon: iconUrl };
+    playData.isRevenge = false;
+
+    // 5階層ごとのボス戦では誓約をランダムに1つ発動
+    playData.activeOaths = [];
+    if (isBoss && rogueData.floor % 5 === 0) {
+        const oaths = ['rapid', 'backwater', 'weak'];
+        playData.activeOaths = [ oaths[Math.floor(Math.random() * oaths.length)] ];
+    }
+
+    playData.isRandom = false;
+    playData.isTyping = false;
+    playData.isCalculation = false;
+    playData.isSurvival = false;
+    playData.context = null;
+
+    gameState.score = 0;
+    gameState.combo = 0;
+    gameState.enemyHP = calculatedHp;
+    gameState.maxHP = calculatedHp;
+    
+    const charaStats = getCharaStats();
+    gameState.maxTime = 10 * charaStats.time;
+    if (playData.activeOaths.includes('rapid')) gameState.maxTime *= 0.5;
+    gameState.timeLeft = gameState.maxTime; 
+    
+    // 背水の誓約があればライフを1にする
+    gameState.lives = playData.activeOaths.includes('backwater') ? 1 : 3;
+
+    isGameActive = false;
+    isPaused = false;
+
+    document.getElementById('field-screen').classList.add('hidden');
+    document.getElementById('game-screen').classList.remove('hidden');
+
+    const uienemyName = document.getElementById('ui-enemy-name');
+    let displayBossName = bossName;
+    if (playData.activeOaths.length > 0) displayBossName = "【誓約】" + bossName;
+    if (uienemyName) uienemyName.innerText = displayBossName;
+    
+    const enemyIcon = document.getElementById('ui-enemy-icon');
+    if (enemyIcon) { 
+        if(iconUrl.startsWith('http')) { enemyIcon.innerHTML = `<img src="${iconUrl}">`; } else { enemyIcon.innerHTML = iconUrl; }
+        enemyIcon.classList.remove('shake-anim'); 
+    }
+    
+    const enemyBox = document.querySelector('.enemy-visual-box');
+    if(enemyBox) enemyBox.classList.remove('anim-paused', 'fade-out');
+    const hpFrame = document.querySelector('.enemy-hp-frame');
+    if (hpFrame) hpFrame.style.display = '';
+    const timerBar = document.getElementById('ui-timer'); 
+    if(timerBar) timerBar.style.width = '100%'; 
+    const timerText = document.getElementById('ui-timer-text'); 
+    if(timerText) timerText.innerText = gameState.maxTime.toFixed(1);
+
+    updateUI();
+    startCountdown();
 }
