@@ -40,6 +40,9 @@ function startRogueMode() {
     rogueData.atkBuff = 1.0;
     rogueData.active = true;
     
+    // 【修正】探索開始時にライフを初期化
+    gameState.lives = 3; 
+    
     document.getElementById('title-screen').classList.add('hidden');
     document.getElementById('field-screen').classList.remove('hidden');
     
@@ -239,6 +242,8 @@ function triggerRogueBattle() {
     
     const charaStats = getCharaStats();
     gameState.maxTime = 10 * charaStats.time;
+    // 【修正】タイマーの初期値を明示的にセット
+    gameState.timeLeft = gameState.maxTime; 
 
     isGameActive = false;
     isPaused = false;
@@ -248,12 +253,24 @@ function triggerRogueBattle() {
 
     const uienemyName = document.getElementById('ui-enemy-name');
     if (uienemyName) uienemyName.innerText = playData.currentBoss.name;
+    
+    // 【修正】エフェクトクラスやUIの完全リセット
     const enemyIcon = document.getElementById('ui-enemy-icon');
-    if (enemyIcon) enemyIcon.innerHTML = "👾";
+    if (enemyIcon) {
+        enemyIcon.innerHTML = "👾";
+        enemyIcon.classList.remove('shake-anim');
+    }
+    
+    const enemyBox = document.querySelector('.enemy-visual-box');
+    if(enemyBox) enemyBox.classList.remove('anim-paused', 'fade-out');
 
-    // HPバーの表示調整
     const hpFrame = document.querySelector('.enemy-hp-frame');
     if (hpFrame) hpFrame.style.display = '';
+
+    const timerBar = document.getElementById('ui-timer'); 
+    if(timerBar) timerBar.style.width = '100%'; 
+    const timerText = document.getElementById('ui-timer-text'); 
+    if(timerText) timerText.innerText = gameState.maxTime.toFixed(1);
 
     updateUI();
     startCountdown();
@@ -355,13 +372,19 @@ function exitRogueSystem(success) {
     gameState.xp += rogueData.earnedXp;
     saveGame();
 
-    document.getElementById('field-screen').classList.add('hidden');
-    document.getElementById('title-screen').classList.remove('hidden');
+    // 【修正】ゲーム状態と各種UIを完全に初期化する関数を呼ぶ
+    if (typeof backToTitle === 'function') {
+        backToTitle();
+    }
+    
+    // 確実に探索画面も隠す
+    document.getElementById('field-screen')?.classList.add('hidden');
 
     if (success) {
         alert(`探索完了！\nクラウドセーブ可能な恒久XPとして ${rogueData.earnedXp} XP が加算されました。`);
     } else {
         alert(`探索失敗...\n拠点に強制送還されましたが、道中で残った ${rogueData.earnedXp} XP は回収されました。`);
     }
+    
     if (typeof updateTitleInfo === 'function') updateTitleInfo();
 }
