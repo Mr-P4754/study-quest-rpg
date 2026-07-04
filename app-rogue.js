@@ -80,6 +80,8 @@ function generateRogueFloor() {
     rogueData.playerY = 1;
     rogueData.map[1][1] = ROGUE_TILES.VISITED; // スタート位置は踏破済み
 
+    rogueData.shopBought = false; // 追加: 階層移動時にショップ購入権をリセット
+
     if (rogueData.floor % 5 === 0) {
         rogueData.map[5][5] = ROGUE_TILES.SHOP;
         rogueData.map[h - 2][w - 2] = ROGUE_TILES.STAIRS;
