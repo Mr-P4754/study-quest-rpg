@@ -19,34 +19,31 @@ let rogueData = {
 };
 
 const ROGUE_TILES = {
-    WALL: '🌲',
-    FLOOR: '🟫',
-    ENEMY: '👾',
-    STAIRS: '🚪',
-    PLAYER: '🧙',
-    FOUNTAIN: '⛲',
-    SWAMP: '🟩',
-    BOOK: '📜',
-    TRAP: '🕸️',
-    STATUE: '🗿',
-    CURSE: '💀',
-    SHOP: '🛍️'
+    WALL: '🌲', FLOOR: '🟫', VISITED: '🟫', ENEMY: '👾', STAIRS: '🚪', PLAYER: '🧙',
+    FOUNTAIN: '⛲', BOOK: '📜', TRAP: '🕸️', STATUE: '🗿', CURSE: '💀', SHOP: '🛍️'
+    // ライフ減トラップ(SWAMP)は排除
 };
 
 function startRogueMode() {
+    const g = document.getElementById('rogue-grade-select')?.value;
+    if(!g) return alert("学年を選択してください");
+    let qList = rawData.questions.filter(q => q.grade == g);
+    if(qList.length === 0) return alert("問題がありません");
+
+    // 選択された学年の問題を保存しておく
+    playData.rogueQuestions = qList;
+
     rogueData.floor = 1;
     rogueData.earnedXp = 0;
     rogueData.exploreLevel = 1;
     rogueData.atkBuff = 1.0;
     rogueData.active = true;
-    
-    // 【修正】探索開始時にライフを初期化
     gameState.lives = 3; 
     
+    document.getElementById('rogue-menu-overlay')?.classList.add('hidden');
     document.getElementById('title-screen').classList.add('hidden');
     document.getElementById('field-screen').classList.remove('hidden');
     
-    // キーボード移動のイベントリスナー（重複登録防止）
     if (!window.rogueKeyHandlerRegistered) {
         window.addEventListener('keydown', (e) => {
             if (!rogueData.active || !document.getElementById('game-screen').classList.contains('hidden')) return;
@@ -71,54 +68,24 @@ function generateRogueFloor() {
 
     for (let y = 1; y < h - 1; y++) {
         for (let x = 1; x < w - 1; x++) {
-            rogueData.map[y][x] = ROGUE_TILES.FLOOR;
+            rogueData.map[y][x] = ROGUE_TILES.FLOOR; // 未踏破マス
         }
     }
 
     rogueData.playerX = 1;
     rogueData.playerY = 1;
+    rogueData.map[1][1] = ROGUE_TILES.VISITED; // スタート位置は踏破済み
 
-    // 5の倍数階は安全なショップ階
     if (rogueData.floor % 5 === 0) {
         rogueData.map[5][5] = ROGUE_TILES.SHOP;
         rogueData.map[h - 2][w - 2] = ROGUE_TILES.STAIRS;
     } else {
         rogueData.map[h - 2][w - 2] = ROGUE_TILES.STAIRS;
-        
-        const spawnables = [
-            ROGUE_TILES.FOUNTAIN, ROGUE_TILES.SWAMP, ROGUE_TILES.BOOK, 
-            ROGUE_TILES.TRAP, ROGUE_TILES.STATUE, ROGUE_TILES.CURSE
-        ];
-        
-        // 敵の配置（階層が進むごとに増加）
-        const enemyCount = Math.min(8, 2 + Math.floor(rogueData.floor * 0.6));
-        let count = 0;
-        while (count < enemyCount) {
-            let rx = Math.floor(Math.random() * (w - 2)) + 1;
-            let ry = Math.floor(Math.random() * (h - 2)) + 1;
-            if (rogueData.map[ry][rx] === ROGUE_TILES.FLOOR && (rx !== 1 || ry !== 1)) {
-                rogueData.map[ry][rx] = ROGUE_TILES.ENEMY;
-                count++;
-            }
-        }
-
-        // ギミックマスの配置
-        const gimmickCount = 4;
-        count = 0;
-        while (count < gimmickCount) {
-            let rx = Math.floor(Math.random() * (w - 2)) + 1;
-            let ry = Math.floor(Math.random() * (h - 2)) + 1;
-            if (rogueData.map[ry][rx] === ROGUE_TILES.FLOOR && (rx !== 1 || ry !== 1)) {
-                rogueData.map[ry][rx] = spawnables[Math.floor(Math.random() * spawnables.length)];
-                count++;
-            }
-        }
     }
 
     updateRogueUI();
     drawRogueMap();
 }
-
 function drawRogueMap() {
     const canvas = document.getElementById('rogue-canvas');
     if (!canvas) return;
@@ -159,11 +126,18 @@ function moveRoguePlayer(dx, dy) {
     rogueData.steps--;
 
     const tile = rogueData.map[ny][nx];
-    rogueData.map[ny][nx] = ROGUE_TILES.FLOOR; // 踏んだマスは床になる
+    
+    // 未踏破マスの場合は踏破済みにし、ランダムエンカウントを判定
+    if (tile === ROGUE_TILES.FLOOR) {
+        rogueData.map[ny][nx] = ROGUE_TILES.VISITED;
+        triggerRogueRNGEvent();
+    } else {
+        // ショップや階段の場合は処理を実行
+        processRogueTile(tile);
+    }
 
-    processRogueTile(tile);
-
-    if (rogueData.steps <= 0 && tile !== ROGUE_TILES.STAIRS && rogueData.active) {
+    // イベント発生で戦闘画面に移行していない場合のみ歩数切れチェック
+    if (rogueData.steps <= 0 && tile !== ROGUE_TILES.STAIRS && rogueData.active && document.getElementById('game-screen').classList.contains('hidden')) {
         showAppModal("歩数がゼロになりました。拠点に強制送還されます。", "alert").then(() => {
             exitRogueSystem(false);
         });
@@ -174,6 +148,27 @@ function moveRoguePlayer(dx, dy) {
     drawRogueMap();
 }
 
+// 新規追加: ランダムエンカウントロジック
+function triggerRogueRNGEvent() {
+    // 発生確率: 序盤は低く、階層ごとに5%ずつ上昇 (最大80%)
+    let eventChance = Math.min(0.8, 0.1 + (rogueData.floor * 0.05));
+    if (Math.random() > eventChance) return; // 何も起こらない
+
+    // イベント発生時の敵出現確率: 序盤30%〜階層ごとに5%上昇 (最大80%)
+    let enemyChance = Math.min(0.8, 0.3 + (rogueData.floor * 0.05));
+    
+    if (Math.random() < enemyChance) {
+        showCutIn("⚠️敵出現");
+        setTimeout(() => triggerRogueBattle(), 800);
+    } else {
+        // バフ・デバフの獲得 (SWAMPは除外)
+        const gimmicks = [ROGUE_TILES.FOUNTAIN, ROGUE_TILES.BOOK, ROGUE_TILES.TRAP, ROGUE_TILES.STATUE, ROGUE_TILES.CURSE];
+        const g = gimmicks[Math.floor(Math.random() * gimmicks.length)];
+        processRogueTile(g);
+    }
+}
+
+// processRogueTile から SWAMP の分岐を削除
 function processRogueTile(tile) {
     switch (tile) {
         case ROGUE_TILES.STAIRS:
@@ -181,19 +176,9 @@ function processRogueTile(tile) {
             showCutIn(`階層クリア 次へ`);
             generateRogueFloor();
             break;
-        case ROGUE_TILES.ENEMY:
-            triggerRogueBattle();
-            break;
         case ROGUE_TILES.FOUNTAIN:
             gameState.lives = Math.min(3, gameState.lives + 1);
             showCutIn("❤️ライフ回復");
-            break;
-        case ROGUE_TILES.SWAMP:
-            gameState.lives--;
-            showCutIn("🟩毒の沼 ライフ減少");
-            if (gameState.lives <= 0) {
-                showAppModal("ライフが尽きました。拠点に強制送還されます。", "alert").then(() => exitRogueSystem(false));
-            }
             break;
         case ROGUE_TILES.BOOK:
             rogueData.exploreLevel++;
@@ -222,7 +207,8 @@ function triggerRogueBattle() {
     const rate = 1.0 + (rogueData.floor * 0.15);
     const calculatedHp = Math.floor(baseHp * rate);
 
-    let qList = rawData.questions.sort(() => Math.random() - 0.5);
+    // 学年選択で保存した問題プールを使用
+    let qList = [...playData.rogueQuestions].sort(() => Math.random() - 0.5);
     
     playData.questions = qList;
     playData.qIndex = 0;
@@ -242,7 +228,6 @@ function triggerRogueBattle() {
     
     const charaStats = getCharaStats();
     gameState.maxTime = 10 * charaStats.time;
-    // 【修正】タイマーの初期値を明示的にセット
     gameState.timeLeft = gameState.maxTime; 
 
     isGameActive = false;
@@ -253,20 +238,13 @@ function triggerRogueBattle() {
 
     const uienemyName = document.getElementById('ui-enemy-name');
     if (uienemyName) uienemyName.innerText = playData.currentBoss.name;
-    
-    // 【修正】エフェクトクラスやUIの完全リセット
     const enemyIcon = document.getElementById('ui-enemy-icon');
-    if (enemyIcon) {
-        enemyIcon.innerHTML = "👾";
-        enemyIcon.classList.remove('shake-anim');
-    }
+    if (enemyIcon) { enemyIcon.innerHTML = "👾"; enemyIcon.classList.remove('shake-anim'); }
     
     const enemyBox = document.querySelector('.enemy-visual-box');
     if(enemyBox) enemyBox.classList.remove('anim-paused', 'fade-out');
-
     const hpFrame = document.querySelector('.enemy-hp-frame');
     if (hpFrame) hpFrame.style.display = '';
-
     const timerBar = document.getElementById('ui-timer'); 
     if(timerBar) timerBar.style.width = '100%'; 
     const timerText = document.getElementById('ui-timer-text'); 
@@ -351,6 +329,8 @@ function buyRogueSteps(price) {
 }
 
 function updateRogueUI() {
+    const l = document.getElementById('rogue-life');
+    if (l) l.innerText = '❤️'.repeat(Math.max(0, gameState.lives));
     const f = document.getElementById('rogue-floor');
     if (f) f.innerText = rogueData.floor;
     const s = document.getElementById('rogue-steps');
