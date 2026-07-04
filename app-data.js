@@ -1,4 +1,4 @@
-const API_URL = 'https://script.google.com/macros/s/AKfycbxngsLreSD6KWlnfEJeB6ODObH5yL1REtBEZAE9ZZzgwYFtg1ToIw9eDll3V8XO1x7scQ/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyG3MnjSn1D1flR3-LR1AzfoijF_ID7GJzZ1d5gYgemZd504kGwou02cV-M8c8kfJwi/exec';
 
 // Settings
 const RARITY_CAPS = { 'N': 5, 'R': 10, 'SR': 15, 'SSR': 20, 'UR': 30 };
