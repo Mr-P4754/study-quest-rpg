@@ -67,12 +67,14 @@
 </div>
 
 <div id="field-screen" class="screen hidden" style="background-color: #1a252f; display:flex; flex-direction:column;">
-    <div class="header" style="background: #2c3e50; justify-content: space-around; padding: 0 10px;">
-        <div style="font-weight:bold; font-size:0.9em; color:#e74c3c; width:60px; text-align:left;" id="rogue-life">❤️❤️❤️</div>
-        <div style="font-weight:bold; font-size:0.9em;">階層: <span id="rogue-floor" style="color:#f1c40f; font-size:1.2em;">1</span>F</div>
-        <div style="font-weight:bold; font-size:0.9em;">歩数: <span id="rogue-steps" style="color:#e74c3c; font-size:1.2em;">0/0</span></div>
-        <div style="font-weight:bold; font-size:0.9em;">探索Lv: <span id="rogue-explv" style="color:#2ecc71; font-size:1.2em;">1</span></div>
-        <div style="font-weight:bold; font-size:0.9em;">獲得XP: <span id="rogue-ctxp" style="color:#e67e22; font-size:1.2em;">0</span></div>
+    <div class="header" style="background: #2c3e50; display:grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; padding: 5px 10px; height: auto; gap: 5px;">
+        <div style="font-weight:bold; font-size:0.9em; color:#e74c3c; text-align:left; display:flex; align-items:center;" id="rogue-life">❤️❤️❤️</div>
+        <div style="font-weight:bold; font-size:0.9em; text-align:right;">階層: <span id="rogue-floor" style="color:#f1c40f; font-size:1.2em;">1</span>F</div>
+        <div style="font-weight:bold; font-size:0.9em; text-align:left;">歩数: <span id="rogue-steps" style="color:#e74c3c; font-size:1.2em;">0/0</span></div>
+        <div style="font-weight:bold; font-size:0.9em; text-align:right; display:flex; justify-content:flex-end; gap:10px;">
+            <span>探索Lv: <span id="rogue-explv" style="color:#2ecc71; font-size:1.2em;">1</span></span>
+            <span>獲得XP: <span id="rogue-ctxp" style="color:#e67e22; font-size:1.2em;">0</span></span>
+        </div>
     </div>
     <div id="rogue-canvas-container" style="flex:1; display:flex; justify-content:center; align-items:center; width:100%; overflow:hidden; position:relative; background: #111;">
         <canvas id="rogue-canvas"></canvas>
