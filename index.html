@@ -25,7 +25,7 @@
     <div class="version-text" onclick="openVersionHistory()">Ver 8.0.0</div>
     
     <div class="menu-btn-container">
-        <button id="btn-rogue-start" class="menu-btn full-width" style="background:linear-gradient(135deg, #d35400, #c0392b); border-bottom-color:#962d22; font-size:1.05em; grid-column: span 2;" onclick="startRogueMode()">
+        <button id="btn-rogue-start" class="menu-btn full-width" style="background:linear-gradient(135deg, #d35400, #c0392b); border-bottom-color:#962d22; font-size:1.05em; grid-column: span 2;" onclick="openRogueMenu()">
             🧭 ローグライク探索モード
         </button>
 
@@ -68,6 +68,7 @@
 
 <div id="field-screen" class="screen hidden" style="background-color: #1a252f; display:flex; flex-direction:column;">
     <div class="header" style="background: #2c3e50; justify-content: space-around; padding: 0 10px;">
+        <div style="font-weight:bold; font-size:0.9em; color:#e74c3c; width:60px; text-align:left;" id="rogue-life">❤️❤️❤️</div>
         <div style="font-weight:bold; font-size:0.9em;">階層: <span id="rogue-floor" style="color:#f1c40f; font-size:1.2em;">1</span>F</div>
         <div style="font-weight:bold; font-size:0.9em;">歩数: <span id="rogue-steps" style="color:#e74c3c; font-size:1.2em;">0/0</span></div>
         <div style="font-weight:bold; font-size:0.9em;">探索Lv: <span id="rogue-explv" style="color:#2ecc71; font-size:1.2em;">1</span></div>
@@ -453,5 +454,18 @@
     <script src="app-ui.js"></script>
     <script src="app-rogue.js"></script>
 
+<div id="rogue-menu-overlay" class="overlay hidden" style="z-index: 290;">
+    <div class="modal" style="max-width:350px;">
+        <h2 style="color:#d35400; margin-top:0;">🧭 探索準備</h2>
+        <p style="font-size:0.9em; text-align:left;">挑戦する学年を選択して、無限のダンジョンに潜りましょう。</p>
+        <div style="margin: 20px 0;">
+            <label style="font-weight:bold; color:#2c3e50;">挑戦する学年</label>
+            <select id="rogue-grade-select" class="select-box" style="width:100%; margin-top:5px; font-size:1.1em; padding:10px;"><option value="">学年を選択...</option></select>
+        </div>
+        <button class="menu-btn" style="background:#d35400;" onclick="startRogueMode()">探索開始</button>
+        <button class="menu-btn" style="margin-top:10px; background:#95a5a6;" onclick="closeRogueMenu()">やめる</button>
+    </div>
+</div>
+    
 </body>
 </html>
