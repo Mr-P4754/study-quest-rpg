@@ -79,12 +79,15 @@
     <div id="rogue-canvas-container" style="flex:1; display:flex; justify-content:center; align-items:center; width:100%; overflow:hidden; position:relative; background: #111;">
         <canvas id="rogue-canvas"></canvas>
     </div>
-    <div id="rogue-dpad" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin:15px auto; width:200px; height:140px; flex-shrink: 0;">
-        <div></div><button class="menu-btn" style="height:50px; padding:0; background:#34495e; border-bottom:4px solid #2c3e50;" onclick="moveRoguePlayer(0, -1)">▲</button><div></div>
-        <button class="menu-btn" style="height:50px; padding:0; background:#34495e; border-bottom:4px solid #2c3e50;" onclick="moveRoguePlayer(-1, 0)">◀</button>
-        <button class="menu-btn" style="height:50px; padding:0; background:#e74c3c; border-bottom:4px solid #c0392b;" onclick="escapeRogueConfirm()">帰還</button>
-        <button class="menu-btn" style="height:50px; padding:0; background:#34495e; border-bottom:4px solid #2c3e50;" onclick="moveRoguePlayer(1, 0)">▶</button>
-        <div></div><button class="menu-btn" style="height:50px; padding:0; background:#34495e; border-bottom:4px solid #2c3e50;" onclick="moveRoguePlayer(0, 1)">▼</button><div></div>
+    
+    <div style="display:flex; justify-content:center; align-items:center; gap:20px; margin:15px auto; flex-shrink: 0; width:100%; max-width: 350px;">
+        <div id="rogue-dpad" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; width:180px; height:140px;">
+            <div></div><button class="menu-btn" style="height:50px; padding:0; background:#34495e; border-bottom:4px solid #2c3e50;" onclick="moveRoguePlayer(0, -1)">▲</button><div></div>
+            <button class="menu-btn" style="height:50px; padding:0; background:#34495e; border-bottom:4px solid #2c3e50;" onclick="moveRoguePlayer(-1, 0)">◀</button>
+            <div></div> <button class="menu-btn" style="height:50px; padding:0; background:#34495e; border-bottom:4px solid #2c3e50;" onclick="moveRoguePlayer(1, 0)">▶</button>
+            <div></div><button class="menu-btn" style="height:50px; padding:0; background:#34495e; border-bottom:4px solid #2c3e50;" onclick="moveRoguePlayer(0, 1)">▼</button><div></div>
+        </div>
+        <button class="menu-btn" style="height:60px; width:60px; padding:0; background:#e74c3c; border-bottom:4px solid #c0392b; border-radius: 50%; font-size: 0.9em;" onclick="escapeRogueConfirm()">帰還</button>
     </div>
 </div>
 
