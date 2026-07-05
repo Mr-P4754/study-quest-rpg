@@ -660,7 +660,14 @@ function handleResultClose() {
     if (typeof rogueData !== 'undefined' && rogueData.active) {
         document.getElementById('result-overlay')?.classList.add('hidden');
         document.getElementById('field-screen')?.classList.remove('hidden');
-        if (typeof drawRogueMap === 'function') drawRogueMap();
+        
+        // 【追加】ボス戦だった場合は、リザルトを閉じた後に階層を進める
+        if (rogueData.isBossBattle) {
+            rogueData.floor++;
+            generateRogueFloor();
+        } else {
+            if (typeof drawRogueMap === 'function') drawRogueMap();
+        }
     } else {
         backToTitle();
     }
