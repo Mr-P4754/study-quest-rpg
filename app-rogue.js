@@ -65,7 +65,8 @@ function startRogueMode() {
 }
 
 function generateRogueFloor() {
-    rogueData.maxSteps = Math.max(15, 35 - rogueData.floor) + (rogueData.bonusSteps || 0);
+    // 階層による歩数上限の減少を廃止し、固定値(30) + ボーナス歩数に変更
+    rogueData.maxSteps = 30 + (rogueData.bonusSteps || 0);
     rogueData.steps = rogueData.maxSteps;
 
     const w = rogueData.mapWidth;
