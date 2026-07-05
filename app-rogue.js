@@ -166,7 +166,7 @@ function triggerRogueRNGEvent() {
     
     if (Math.random() < enemyChance) {
         rogueData.isAnimating = true; // 敵出現時は操作をロック
-        showCutIn("敵出現⚠️");
+        showRogueCutIn("敵出現⚠️"); // ← 変更
         setTimeout(() => {
             rogueData.isAnimating = false; // ロック解除してバトル開始
             triggerRogueBattle(false);
@@ -182,29 +182,29 @@ function triggerRogueRNGEvent() {
 function processRogueTile(tile) {
     switch (tile) {
         case ROGUE_TILES.STAIRS:
-            showCutIn(`${rogueData.floor}階クリア🎉`);
+            // カットインを削除し、直接ボス戦へ移行
             rogueData.floor++;
             triggerRogueBattle(true);
             break;
         case ROGUE_TILES.FOUNTAIN:
             gameState.lives = Math.min(3, gameState.lives + 1);
-            showCutIn("ライフ❤️ +1");
+            showRogueCutIn("ライフ❤️ +1"); // ← 変更
             break;
         case ROGUE_TILES.BOOK:
             rogueData.exploreLevel++;
-            showCutIn("探索レベル📜UP");
+            showRogueCutIn("探索レベル📜UP"); // ← 変更
             break;
         case ROGUE_TILES.TRAP:
             rogueData.exploreLevel = Math.max(1, rogueData.exploreLevel - 1);
-            showCutIn("探索レベル📜DOWN");
+            showRogueCutIn("探索レベル📜DOWN"); // ← 変更
             break;
         case ROGUE_TILES.STATUE:
             rogueData.atkBuff += 0.3;
-            showCutIn("攻撃力⚔️ +30％");
+            showRogueCutIn("攻撃力⚔️ +30％"); // ← 変更
             break;
         case ROGUE_TILES.CURSE:
             rogueData.atkBuff = Math.max(0.1, rogueData.atkBuff - 0.2);
-            showCutIn("攻撃力⚔️ -20％");
+            showRogueCutIn("攻撃力⚔️ -20％"); // ← 変更
             break;
         case ROGUE_TILES.SHOP:
             triggerRogueShop();
@@ -432,4 +432,24 @@ function triggerRogueBattle(isBoss = false) {
 
     updateUI();
     startCountdown();
+}
+
+function showRogueCutIn(t) {
+    const container = document.getElementById('rogue-canvas-container');
+    if (!container) return;
+    const d = document.createElement('div');
+    d.style.position = 'absolute';
+    d.style.top = '40px'; // 歩数や階層の下（キャンバス上部）
+    d.style.left = '50%';
+    d.style.fontSize = '1.2em';
+    d.style.fontWeight = 'bold';
+    d.style.color = '#f1c40f';
+    d.style.textShadow = '2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000';
+    d.style.zIndex = '100';
+    d.style.pointerEvents = 'none';
+    d.style.whiteSpace = 'nowrap';
+    d.style.animation = 'damageFloat 1.2s ease-out forwards';
+    d.innerText = t;
+    container.appendChild(d);
+    setTimeout(() => d.remove(), 1200);
 }
