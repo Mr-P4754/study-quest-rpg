@@ -331,11 +331,47 @@ function exitRogueSystem(success) {
     // 確実に探索画面も隠す
     document.getElementById('field-screen')?.classList.add('hidden');
 
-    if (success) {
-        alert(`探索完了！\nクラウドセーブ可能な恒久XPとして ${rogueData.earnedXp} XP が加算されました。`);
-    } else {
-        alert(`探索失敗...\n拠点に強制送還されましたが、道中で残った ${rogueData.earnedXp} XP は回収されました。`);
+    // アラートの代わりにリッチなリザルト画面を表示
+    const resTitle = document.getElementById('res-title');
+    if (resTitle) {
+        resTitle.innerText = success ? "EXPLORE COMPLETE!" : "EXPLORE FAILED...";
+        resTitle.style.color = success ? "#f1c40f" : "#bdc3c7";
     }
+    
+    const resIcon = document.getElementById('res-icon');
+    if (resIcon) resIcon.innerText = success ? "🏆" : "💨";
+
+    const resScoreSpan = document.getElementById('res-score');
+    if (resScoreSpan && resScoreSpan.previousSibling && resScoreSpan.previousSibling.nodeType === 3) {
+        resScoreSpan.previousSibling.nodeValue = "最終到達階層: ";
+    }
+    if (resScoreSpan) resScoreSpan.innerText = rogueData.floor + "F";
+
+    const resDetails = document.getElementById('res-details');
+    if (resDetails) {
+        if (success) {
+            resDetails.innerHTML = `<div style="font-size: 1.1em; font-weight: bold; color: #2c3e50;">探索目標を達成し帰還しました！</div><div style="font-size: 0.9em; margin-top: 5px;">一時EXPを恒久XPとして獲得しました。</div>`;
+        } else {
+            resDetails.innerHTML = `<div style="font-size: 1.1em; font-weight: bold; color: #c0392b;">探索失敗…拠点へ強制送還されました。</div><div style="font-size: 0.9em; margin-top: 5px;">道中で残った一時EXPは回収されました。</div>`;
+        }
+        resDetails.style.display = 'block';
+    }
+
+    const resDrop = document.getElementById('res-drop');
+    if (resDrop) resDrop.style.display = 'none';
+
+    const resXpLabel = document.getElementById('res-xp-label');
+    if (resXpLabel) resXpLabel.innerText = "獲得恒久XP";
+    
+    const resXpSpan = document.getElementById('res-xp');
+    if (resXpSpan) {
+        resXpSpan.style.lineHeight = "1.1";
+        resXpSpan.innerHTML = `+<span style="color:#f1c40f;">${rogueData.earnedXp}</span>`;
+    }
+
+    if (success) playSE('win'); else playSE('lose');
+
+    document.getElementById('result-overlay')?.classList.remove('hidden');
     
     if (typeof updateTitleInfo === 'function') updateTitleInfo();
 }
