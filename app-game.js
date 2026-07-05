@@ -164,7 +164,7 @@ function getCharaStats() {
     // ローグライクモードでのバフフック対応
     if (typeof rogueData !== 'undefined' && rogueData.active) {
         stats.atk *= rogueData.atkBuff;
-        stats.atk *= (1.0 + (rogueData.exploreLevel - 1) * 0.1);
+        stats.atk *= (1.0 + (rogueData.exploreLevel - 1) * 0.005);
     }
 
     return stats;
@@ -369,7 +369,7 @@ function finishGame(isClear) {
             const stats = getCharaStats();
             const baseReward = 500;
             const floorBonus = rogueData.floor * 100;
-            const earned = Math.floor((baseReward + floorBonus) * stats.exp * (1.0 + rogueData.exploreLevel * 0.1));
+            const earned = Math.floor((baseReward + floorBonus) * stats.exp * (1.0 + rogueData.exploreLevel * 0.005));
             
             rogueData.earnedXp += earned;
 
