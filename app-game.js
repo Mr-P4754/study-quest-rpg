@@ -447,11 +447,18 @@ function finishGame(isClear) {
         if (playData.activeOaths.length === 1) oathMultiplier = 2;
         else if (playData.activeOaths.length >= 2) oathMultiplier = 3;
 
-        let milestoneBonus = Math.floor(correctCount / 50) * 50;
-        let earnedExp = (correctCount * oathMultiplier) + milestoneBonus;
-        
         const eqInv = gameState.charaInventory[gameState.equipped];
         const cMaster = rawData.characters ? rawData.characters.find(c => c.id == gameState.equipped) : null;
+        
+        let isMax = false;
+        if (eqInv && cMaster) {
+            const maxL = RARITY_CAPS[eqInv.currentRarity || cMaster.rarity] || 10;
+            if (eqInv.level >= maxL) isMax = true;
+        }
+
+        let milestoneBonus = isMax ? 0 : Math.floor(correctCount / 50) * 50;
+        let earnedExp = (correctCount * oathMultiplier) + milestoneBonus;
+        
         let growthResultText = "なし";
         
         if (eqInv && cMaster) {
