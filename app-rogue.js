@@ -14,6 +14,7 @@ let rogueData = {
     earnedXp: 0,
     exploreLevel: 1,
     atkBuff: 1.0,
+    bonusSteps: 0,
     active: false,
     tileSize: 32,
     isAnimating: false,
@@ -39,6 +40,7 @@ function startRogueMode() {
     rogueData.earnedXp = 0;
     rogueData.exploreLevel = 1;
     rogueData.atkBuff = 1.0;
+    rogueData.bonusSteps = 0;
     rogueData.active = true;
     rogueData.isAnimating = false;
     rogueData.shopBought = false;
@@ -63,7 +65,7 @@ function startRogueMode() {
 }
 
 function generateRogueFloor() {
-    rogueData.maxSteps = Math.max(15, 35 - rogueData.floor);
+    rogueData.maxSteps = Math.max(15, 35 - rogueData.floor) + (rogueData.bonusSteps || 0);
     rogueData.steps = rogueData.maxSteps;
 
     const w = rogueData.mapWidth;
@@ -197,14 +199,18 @@ function processRogueTile(tile) {
             rogueData.exploreLevel = Math.max(1, rogueData.exploreLevel - 1);
             showRogueCutIn("探索レベル📜DOWN"); // ← 変更
             break;
-        case ROGUE_TILES.STATUE:
-            rogueData.atkBuff += 0.3;
-            showRogueCutIn("攻撃力⚔️ +30％"); // ← 変更
+        case ROGUE_TILES.STATUE: {
+            const buff = Math.floor(Math.random() * 5) + 1;
+            rogueData.atkBuff += (buff / 100);
+            showRogueCutIn(`攻撃力⚔️ +${buff}％`);
             break;
-        case ROGUE_TILES.CURSE:
-            rogueData.atkBuff = Math.max(0.1, rogueData.atkBuff - 0.2);
-            showRogueCutIn("攻撃力⚔️ -20％"); // ← 変更
+        }
+        case ROGUE_TILES.CURSE: {
+            const debuff = Math.floor(Math.random() * 5) + 1;
+            rogueData.atkBuff = Math.max(0.1, rogueData.atkBuff - (debuff / 100));
+            showRogueCutIn(`攻撃力⚔️ -${debuff}％`);
             break;
+        }
         case ROGUE_TILES.SHOP:
             triggerRogueShop();
             break;
@@ -284,6 +290,7 @@ function buyRogueSteps(price) {
     if (rogueData.shopBought || rogueData.earnedXp < price) return;
     rogueData.earnedXp -= price;
     rogueData.shopBought = true;
+    rogueData.bonusSteps = (rogueData.bonusSteps || 0) + 10;
     rogueData.maxSteps += 10;
     rogueData.steps += 10;
     playSE('hit');
