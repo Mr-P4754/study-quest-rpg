@@ -183,7 +183,6 @@ function processRogueTile(tile) {
     switch (tile) {
         case ROGUE_TILES.STAIRS:
             // カットインを削除し、直接ボス戦へ移行
-            rogueData.floor++;
             triggerRogueBattle(true);
             break;
         case ROGUE_TILES.FOUNTAIN:
