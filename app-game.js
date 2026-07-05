@@ -384,19 +384,27 @@ function finishGame(isClear) {
                     gameState.charaInventory[charId].count++;
                 }
                 const cName = rawData.characters.find(x => x.id == charId)?.name || "キャラ";
-                getMsg = `\nさらに「${cName}」を1体獲得！`;
+                getMsg = `\n「${cName}」 1体獲得`; // ← フォーマットを変更
             }
 
             if (typeof updateRogueUI === 'function') updateRogueUI();
 
-            showAppModal(`戦闘勝利！\n探索中の一時XPに +${earned} 獲得しました。${getMsg}`, 'alert').then(() => {
+            // 【修正】リザルトメッセージの構築（カットインを廃止し、リザルト画面に統合）
+            let resultMsg = `戦闘勝利！\n獲得EXP +${earned}`;
+            if (getMsg) resultMsg += getMsg;
+            if (rogueData.isBossBattle) {
+                // 階段到達時にfloorがインクリメントされているため、-1で該当階層を表示
+                resultMsg += `\n${rogueData.floor - 1}階層クリア`;
+            }
+
+            showAppModal(resultMsg, 'alert').then(() => {
                 document.getElementById('game-screen')?.classList.add('hidden');
                 document.getElementById('field-screen')?.classList.remove('hidden');
                 
                 // 【追加】ボス戦だった場合は階層を進める
                 if (rogueData.isBossBattle) {
                     rogueData.floor++;
-                    showCutIn(`階層クリア 次へ`);
+                    // showCutIn(`階層クリア 次へ`); <-- カットイン表示を削除
                     generateRogueFloor();
                 } else {
                     if (typeof drawRogueMap === 'function') drawRogueMap();
