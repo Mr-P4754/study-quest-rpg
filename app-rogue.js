@@ -236,9 +236,9 @@ function renderRogueShopContents() {
     `;
 
     const rogueItems = [
-        { id: 'r_heal', name: 'ライフ回復薬', price: 500, desc: 'ライフを1回復する', icon: '❤️', action: 'buyRogueHeal' },
-        { id: 'r_atk', name: '攻撃の秘薬', price: 1000, desc: '攻撃バフ倍率を +0.5 上昇', icon: '⚔️', action: 'buyRogueAtk' },
-        { id: 'r_step', name: '韋駄天の靴', price: 300, desc: '残り歩数を +10 追加する', icon: '👟', action: 'buyRogueSteps' }
+        { id: 'r_heal', name: 'ライフ回復薬', price: 10000, desc: 'ライフを1回復する', icon: '❤️', action: 'buyRogueHeal' },
+        { id: 'r_atk', name: '攻撃の秘薬', price: 20000, desc: '攻撃バフ倍率を +0.5 上昇', icon: '⚔️', action: 'buyRogueAtk' },
+        { id: 'r_step', name: '韋駄天の靴', price: 30000, desc: '残り歩数上限を +10 追加する', icon: '👟', action: 'buyRogueSteps' }
     ];
 
     rogueItems.forEach(item => {
@@ -284,6 +284,7 @@ function buyRogueSteps(price) {
     if (rogueData.shopBought || rogueData.earnedXp < price) return;
     rogueData.earnedXp -= price;
     rogueData.shopBought = true;
+    rogueData.maxSteps += 10;
     rogueData.steps += 10;
     playSE('hit');
     renderRogueShopContents();
