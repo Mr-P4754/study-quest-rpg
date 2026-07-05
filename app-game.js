@@ -375,38 +375,48 @@ function finishGame(isClear) {
 
             // 【追加】撃破したキャラをインベントリに追加
             const charId = playData.rogueEnemyCharId;
-            let getMsg = "";
+            let getMsgHtml = "";
             if (charId) {
+                const c = rawData.characters.find(x => x.id == charId);
+                const cName = c ? c.name : "キャラ";
+                const cRarity = c ? c.rarity : "N";
                 if (!gameState.charaInventory[charId]) {
-                    const c = rawData.characters.find(x => x.id == charId);
-                    gameState.charaInventory[charId] = { level: 1, count: 1, exp: 0, currentRarity: c ? c.rarity : 'N' };
+                    gameState.charaInventory[charId] = { level: 1, count: 1, exp: 0, currentRarity: cRarity };
                 } else {
                     gameState.charaInventory[charId].count++;
                 }
-                const cName = rawData.characters.find(x => x.id == charId)?.name || "キャラ";
-                getMsg = `\n「${cName}」 1体獲得`;
+                getMsgHtml = `<span class="rarity-${cRarity}" style="font-weight:bold;">[${cRarity}]</span> ${cName} × 1`;
             }
 
             if (typeof updateRogueUI === 'function') updateRogueUI();
 
-            // 【修正】リザルトメッセージの構築
-            let resultMsg = `戦闘勝利！\n獲得EXP +${earned}`;
-            if (getMsg) resultMsg += getMsg;
-            if (rogueData.isBossBattle) {
-                resultMsg += `\n${rogueData.floor - 1}階層クリア`;
+            // 【修正】通常のリッチなリザルト画面へ置き換え
+            const resTitle = document.getElementById('res-title');
+            if (resTitle) { resTitle.innerText = rogueData.isBossBattle ? "BOSS BATTLE CLEAR!" : "BATTLE WIN!"; resTitle.style.color = "#f1c40f"; }
+            const resIcon = document.getElementById('res-icon');
+            if (resIcon) resIcon.innerText = "⚔️";
+
+            const resScoreSpan = document.getElementById('res-score');
+            if (resScoreSpan && resScoreSpan.previousSibling && resScoreSpan.previousSibling.nodeType === 3) resScoreSpan.previousSibling.nodeValue = "進行階層: ";
+            if (resScoreSpan) resScoreSpan.innerText = rogueData.floor + "F";
+
+            const resDetails = document.getElementById('res-details');
+            if (resDetails) {
+                let html = `<div style="font-size: 1.2em; font-weight: bold; color: #2c3e50;">獲得探索EXP <span style="color:#e67e22;">+${earned}</span></div>`;
+                if (rogueData.isBossBattle) html += `<div style="margin-top:5px; font-weight:bold; color:#c0392b;">🎊 ${rogueData.floor}階層踏破！</div>`;
+                resDetails.innerHTML = html; resDetails.style.display = 'block';
             }
 
-            showAppModal(resultMsg, 'alert').then(() => {
-                document.getElementById('game-screen')?.classList.add('hidden');
-                document.getElementById('field-screen')?.classList.remove('hidden');
-                
-                if (rogueData.isBossBattle) {
-                    rogueData.floor++;
-                    generateRogueFloor();
-                } else {
-                    if (typeof drawRogueMap === 'function') drawRogueMap();
-                }
-            });
+            const resDrop = document.getElementById('res-drop');
+            if (resDrop) { resDrop.style.display = 'block'; resDrop.innerHTML = getMsgHtml ? `ドロップ: ${getMsgHtml}` : 'ドロップ: なし'; }
+            
+            const resXpLabel = document.getElementById('res-xp-label');
+            if (resXpLabel) resXpLabel.innerText = "現在の一時EXP";
+            const resXpSpan = document.getElementById('res-xp');
+            if (resXpSpan) { resXpSpan.style.lineHeight = "1.1"; resXpSpan.innerHTML = `<span style="color:#f1c40f;">${rogueData.earnedXp}</span>`; }
+
+            document.getElementById('game-screen')?.classList.add('hidden');
+            document.getElementById('result-overlay')?.classList.remove('hidden');
         } else {
             playSE('lose');
             showAppModal("戦闘敗北...\n全滅したため拠点へ強制送還されます。", 'alert').then(() => {
