@@ -350,9 +350,9 @@ function exitRogueSystem(success) {
     const resDetails = document.getElementById('res-details');
     if (resDetails) {
         if (success) {
-            resDetails.innerHTML = `<div style="font-size: 1.1em; font-weight: bold; color: #2c3e50;">探索目標を達成し帰還しました！</div><div style="font-size: 0.9em; margin-top: 5px;">一時EXPを恒久XPとして獲得しました。</div>`;
+            resDetails.innerHTML = `<div style="font-size: 1.1em; font-weight: bold; color: #2c3e50;">探索目標を達成し帰還しました！</div><div style="font-size: 0.9em; margin-top: 5px;">獲得した一時EXPを回収しました。</div>`;
         } else {
-            resDetails.innerHTML = `<div style="font-size: 1.1em; font-weight: bold; color: #c0392b;">探索失敗…拠点へ強制送還されました。</div><div style="font-size: 0.9em; margin-top: 5px;">道中で残った一時EXPは回収されました。</div>`;
+            resDetails.innerHTML = `<div style="font-size: 1.1em; font-weight: bold; color: #c0392b;">探索失敗…拠点へ強制送還されました。</div><div style="font-size: 0.9em; margin-top: 5px;">獲得した一時EXPを回収しました。</div>`;
         }
         resDetails.style.display = 'block';
     }
@@ -361,7 +361,7 @@ function exitRogueSystem(success) {
     if (resDrop) resDrop.style.display = 'none';
 
     const resXpLabel = document.getElementById('res-xp-label');
-    if (resXpLabel) resXpLabel.innerText = "獲得恒久XP";
+    if (resXpLabel) resXpLabel.innerText = "獲得EXP";
     
     const resXpSpan = document.getElementById('res-xp');
     if (resXpSpan) {
