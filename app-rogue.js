@@ -371,7 +371,9 @@ function triggerRogueBattle(isBoss = false) {
     playData.questions = qList;
     playData.qIndex = 0;
 
-    let bossName = isBoss ? `${rogueData.floor}F ボス: ${enemyChar.name}` : enemyChar.name;
+    // 【修正】敵キャラの名前にレア度表示を追加
+    let rarityText = `[${enemyChar.rarity}] `;
+    let bossName = isBoss ? `${rogueData.floor}F ボス: ${rarityText}${enemyChar.name}` : `${rarityText}${enemyChar.name}`;
     let iconUrl = (enemyChar.imageUrl && enemyChar.imageUrl.startsWith('http')) ? enemyChar.imageUrl : "👾";
 
     playData.currentBoss = { name: bossName, hp: calculatedHp, icon: iconUrl };
