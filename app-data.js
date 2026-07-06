@@ -249,6 +249,7 @@ async function fetchData() {
         const getVal = (obj, keys) => { for (const k of keys) { const v = obj[k]; if (v !== undefined && v !== null && v !== "") return String(v); } return ""; };
         const getFuzzyVal = (obj, keyword, defaultVal) => { const key = Object.keys(obj).find(k => k.includes(keyword)); const val = key ? obj[key] : ""; return (val !== undefined && val !== null && val !== "") ? String(val) : defaultVal; };
         const convertDriveUrl = (url) => { if(!url || !url.startsWith('http')) return url; if(url.includes('drive.google.com') && (url.includes('/file/d/') || url.includes('id='))) { let id = ""; const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/); if(match1) id = match1[1]; else { const match2 = url.match(/id=([a-zA-Z0-9_-]+)/); if(match2) id = match2[1]; } if(id) return `https://drive.google.com/thumbnail?sz=w1000&id=${id}`; } return url; };
+        const convertDriveAudioUrl = (url) => { if(!url || !url.startsWith('http')) return url; if(url.includes('drive.google.com') && (url.includes('/file/d/') || url.includes('id='))) { let id = ""; const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/); if(match1) id = match1[1]; else { const match2 = url.match(/id=([a-zA-Z0-9_-]+)/); if(match2) id = match2[1]; } if(id) return `https://drive.google.com/uc?export=download&id=${id}`; } return url; };
         
         rawData = { questions: [], characters: [], bosses: [], shopItems: [], typing: [], randomBosses: [], config: [], gifts: [] };
         const generateHashId = (str, prefix) => { let hash = 0; for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash) + str.charCodeAt(i) | 0; return prefix + "_" + Math.abs(hash); };
@@ -265,13 +266,23 @@ async function fetchData() {
                 } else if (lowerKey.includes('character')) {
                     rawData.characters = data[key].filter(d => d).map(c => { const name = getVal(c, ['name', '名前']) || "Unknown"; return { id: String(c.id || c.ID || generateHashId(name, 'chara')), name: name, rarity: getVal(c, ['rarity', 'レア']) || "N", type: getVal(c, ['type', 'タイプ']) || "ATK", value: Number(getVal(c, ['value', '補正値', '効果値']) || 1.0), desc: getVal(c, ['desc', '解説']), imageUrl: convertDriveUrl(getVal(c, ['imageUrl', '画像URL', '画像'])) }; });
                 } else if (lowerKey.includes('boss')) {
-                    rawData.bosses = data[key].filter(d => d).map(b => ({ grade: getVal(b, ['grade', '学年']), unit: getVal(b, ['unit', '単元']), name: getVal(b, ['name', 'bossName', 'ボス名']) || "Boss", hp: Number(getVal(b, ['hp', 'bossHP', 'ボスHP']) || 3000), icon: convertDriveUrl(getFuzzyVal(b, 'ボス画像', "👾")) }));
+                    rawData.bosses = data[key].filter(d => d).map(b => ({ grade: getVal(b, ['grade', '学年']), unit: getVal(b, ['unit', '単元']), name: getVal(b, ['name', 'bossName', 'ボス名']) || "Boss", hp: Number(getVal(b, ['hp', 'bossHP', 'ボスHP']) || 3000), icon: convertDriveUrl(getFuzzyVal(b, 'ボス画像', "👾")), bgmUrl: convertDriveAudioUrl(b.bgmUrl) }));
                 } else if (lowerKey.includes('shop')) {
                     rawData.shopItems = data[key].filter(d => d).map(i => { const name = getVal(i, ['name', 'アイテム名']) || "Item"; return { id: String(i.id || i.ID || generateHashId(name, 'item')), name: name, price: Number(getVal(i, ['price', '価格']) || 1000), type: getVal(i, ['type', 'タイプ']) || "ATK", value: Number(getVal(i, ['value', '効果値']) || 0.1), desc: getVal(i, ['desc', '説明']), icon: getVal(i, ['icon', 'アイコン']) || "🎁" }; });
                 } else if (lowerKey.includes('typing')) {
                     rawData.typing = data[key].filter(d => d).map(t => ({ id: String(t.id || t.ID || generateHashId(getVal(t, ['japanese','日本語']), 'type')), japanese: getVal(t, ['japanese', '日本語', 'display']), romaji: getVal(t, ['romaji', 'ローマ字', 'input']).toLowerCase().replace(/\s+/g, ''), grade: getVal(t, ['grade', '学年']) })).filter(t => t.japanese && t.romaji);
-                } else if (lowerKey.includes('randomboss')) { rawData.randomBosses = data[key];
-                } else if (lowerKey.includes('config')) { rawData.config = data[key];
+                } else if (lowerKey.includes('randomboss')) { rawData.randomBosses = data[key].map(b => ({...b, bgmUrl: convertDriveAudioUrl(b.bgmUrl)}));
+                } else if (lowerKey.includes('config')) { 
+                    rawData.config = data[key].map(c => {
+                        c.defaultBattleBgm = convertDriveAudioUrl(c.defaultBattleBgm);
+                        c.exploreBgm = convertDriveAudioUrl(c.exploreBgm);
+                        c.survivalBgm = convertDriveAudioUrl(c.survivalBgm);
+                        c.typingBgm = convertDriveAudioUrl(c.typingBgm);
+                        c.calcBgm = convertDriveAudioUrl(c.calcBgm);
+                        c.randomBgm = convertDriveAudioUrl(c.randomBgm);
+                        c.revengeBgm = convertDriveAudioUrl(c.revengeBgm);
+                        return c;
+                    });
                 } else if (lowerKey.includes('gift')) { rawData.gifts = data[key]; }
             } catch(e) {}
         }
