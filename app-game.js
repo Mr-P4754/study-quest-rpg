@@ -675,6 +675,7 @@ function handleResultClose() {
         } else {
             if (typeof drawRogueMap === 'function') drawRogueMap();
         }
+        playBGM();
     } else {
         backToTitle();
     }
@@ -744,9 +745,43 @@ function playSE(type) {
 
 const BGM_MML = "T150 L8 O3 G G > C C D C E F G G A G F E D C < B > C4 R4";
 let bgmOscillators = []; let bgmTimeout = null;
+let currentBgmAudio = null;
+
 function playBGM() {
     if (isMuted) return; stopBGM(); 
     if (audioCtx.state === 'suspended') { audioCtx.resume().catch(e => console.warn('BGM resume blocked', e)); }
+    
+    let bgmUrl = null;
+    const config = (rawData.config && rawData.config.length > 0) ? rawData.config[0] : {};
+
+    if (typeof rogueData !== 'undefined' && rogueData.active && document.getElementById('game-screen')?.classList.contains('hidden')) {
+        bgmUrl = config.exploreBgm;
+    } else if (isGameActive) {
+        if (playData.currentBoss && playData.currentBoss.bgmUrl) { bgmUrl = playData.currentBoss.bgmUrl; }
+        else if (playData.isSurvival && config.survivalBgm) { bgmUrl = config.survivalBgm; }
+        else if (playData.isTyping && config.typingBgm) { bgmUrl = config.typingBgm; }
+        else if (playData.isCalculation && config.calcBgm) { bgmUrl = config.calcBgm; }
+        else if (playData.isRandom && config.randomBgm) { bgmUrl = config.randomBgm; }
+        else if (playData.isRevenge && config.revengeBgm) { bgmUrl = config.revengeBgm; }
+        else { bgmUrl = config.defaultBattleBgm; }
+    }
+
+    if (bgmUrl) {
+        currentBgmAudio = new Audio(bgmUrl);
+        currentBgmAudio.loop = true;
+        currentBgmAudio.volume = 0.3;
+        currentBgmAudio.play().catch(e => { playMmlBGM(); });
+    } else {
+        playMmlBGM();
+    }
+}
+
+function stopBGM() { 
+    if (currentBgmAudio) { currentBgmAudio.pause(); currentBgmAudio.currentTime = 0; currentBgmAudio = null; }
+    if (bgmTimeout) clearTimeout(bgmTimeout); bgmOscillators.forEach(osc => { try { osc.stop(); } catch(e){} }); bgmOscillators = []; 
+}
+
+function playMmlBGM() {
     const mml = BGM_MML.replace(/\s+/g, '').toUpperCase(); let index = 0; let nextTime = audioCtx.currentTime + 0.1; let octave = 4; let defaultLen = 4; let tempo = 120;
     const scheduleNote = () => {
         if (!isGameActive) return;
