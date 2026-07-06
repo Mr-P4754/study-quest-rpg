@@ -62,6 +62,7 @@ function startRogueMode() {
     }
     
     generateRogueFloor();
+    playBGM();
 }
 
 function generateRogueFloor() {
