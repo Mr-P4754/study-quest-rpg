@@ -748,7 +748,8 @@ let bgmOscillators = []; let bgmTimeout = null;
 let currentBgmAudio = null;
 
 function playBGM() {
-    if (isMuted) return; stopBGM(); 
+    if (isMuted) return; 
+    
     if (audioCtx.state === 'suspended') { audioCtx.resume().catch(e => console.warn('BGM resume blocked', e)); }
     
     let bgmUrl = null;
@@ -765,6 +766,13 @@ function playBGM() {
         else if (playData.isRevenge && config.revengeBgm) { bgmUrl = config.revengeBgm; }
         else { bgmUrl = config.defaultBattleBgm; }
     }
+
+    // ★最適化: 同じBGMが既に流れている場合は、リセットせずにそのまま継続する
+    if (bgmUrl && currentBgmAudio && currentBgmAudio.src === bgmUrl && !currentBgmAudio.paused) {
+        return;
+    }
+    
+    stopBGM(); // ここで一旦今のBGMを止める
 
     if (bgmUrl) {
         currentBgmAudio = new Audio(bgmUrl);
