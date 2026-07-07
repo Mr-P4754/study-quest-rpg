@@ -724,7 +724,7 @@ function toggleMute() {
         stopBGM(); 
     } else { 
         if(btn) { btn.innerText = "🔊 音量: ON"; btn.style.background = "#34495e"; btn.style.borderColor = "#2c3e50"; }
-        playSE('hit'); if(isGameActive) playBGM(); 
+        playSE('hit'); playBGM(); 
     } 
 }
 function playSE(type) {
@@ -746,6 +746,7 @@ function playSE(type) {
 const BGM_MML = "T150 L8 O3 G G > C C D C E F G G A G F E D C < B > C4 R4";
 let bgmOscillators = []; let bgmTimeout = null;
 let currentBgmAudio = null;
+let currentBgmUrl = null;
 
 function playBGM() {
     if (isMuted) return; 
@@ -768,7 +769,7 @@ function playBGM() {
     }
 
     // ★最適化: 同じBGMが既に流れている場合は、リセットせずにそのまま継続する
-    if (bgmUrl && currentBgmAudio && currentBgmAudio.src === bgmUrl && !currentBgmAudio.paused) {
+    if (bgmUrl && currentBgmAudio && currentBgmUrl === bgmUrl && !currentBgmAudio.paused) {
         return;
     }
     
@@ -776,6 +777,7 @@ function playBGM() {
 
     if (bgmUrl) {
         currentBgmAudio = new Audio(bgmUrl);
+        currentBgmUrl = bgmUrl;
         currentBgmAudio.loop = true;
         currentBgmAudio.volume = 0.3;
         currentBgmAudio.play().catch(e => { playMmlBGM(); });
@@ -786,6 +788,7 @@ function playBGM() {
 
 function stopBGM() { 
     if (currentBgmAudio) { currentBgmAudio.pause(); currentBgmAudio.currentTime = 0; currentBgmAudio = null; }
+    currentBgmUrl = null;
     if (bgmTimeout) clearTimeout(bgmTimeout); bgmOscillators.forEach(osc => { try { osc.stop(); } catch(e){} }); bgmOscillators = []; 
 }
 
@@ -816,4 +819,3 @@ function playMmlBGM() {
     };
     scheduleNote();
 }
-function stopBGM() { if (bgmTimeout) clearTimeout(bgmTimeout); bgmOscillators.forEach(osc => { try { osc.stop(); } catch(e){} }); bgmOscillators = []; }
