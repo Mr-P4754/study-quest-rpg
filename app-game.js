@@ -1,6 +1,21 @@
 // ==========================================
 // app-game.js (ゲーム進行・バトルエンジン)
 // ==========================================
+function getGradeMultiplier(gradeStr) {
+    const g = String(gradeStr || '');
+    if (g.includes('高3')) return 2.20;
+    if (g.includes('高2')) return 2.10;
+    if (g.includes('高1')) return 2.00;
+    if (g.includes('中3')) return 1.90;
+    if (g.includes('中2')) return 1.80;
+    if (g.includes('中1')) return 1.70;
+    if (g.includes('6')) return 1.60;
+    if (g.includes('5')) return 1.50;
+    if (g.includes('4')) return 1.40;
+    if (g.includes('3')) return 1.30;
+    if (g.includes('2')) return 1.10;
+    return 1.00; // 1年 or 学年不明
+}
 
 function showCutIn(t) { 
     const d = document.createElement('div'); 
@@ -369,7 +384,9 @@ function finishGame(isClear) {
             const stats = getCharaStats();
             const baseReward = 500;
             const floorBonus = rogueData.floor * 100;
-            const earned = Math.floor((baseReward + floorBonus) * stats.exp * (1.0 + rogueData.exploreLevel * 0.005));
+            const currentGrade = playData.questions && playData.questions.length > 0 ? playData.questions[0].grade : '';
+            const gradeMultiplier = getGradeMultiplier(currentGrade);
+            const earned = Math.floor((baseReward + floorBonus) * stats.exp * (1.0 + rogueData.exploreLevel * 0.005) * gradeMultiplier);
             
             rogueData.earnedXp += earned;
 
@@ -457,7 +474,9 @@ function finishGame(isClear) {
         }
 
         let milestoneBonus = isMax ? 0 : Math.floor(correctCount / 50) * 50;
-        let earnedExp = (correctCount * oathMultiplier) + milestoneBonus;
+        const currentGrade = playData.questions && playData.questions.length > 0 ? playData.questions[0].grade : '';
+        const gradeMultiplier = getGradeMultiplier(currentGrade);
+        let earnedExp = Math.floor(((correctCount * oathMultiplier) + milestoneBonus) * gradeMultiplier);
         
         let growthResultText = "なし";
         
@@ -590,7 +609,9 @@ function finishGame(isClear) {
             conditionRate = CAMPAIGN_RATE;
         }
         const partA = gameState.score * stats.exp; const partB = isClear ? (gameState.score * 0.2) : 0; const partC = gameState.score * (conditionRate - 1.0);
-        earned = Math.floor(partA + partB + partC);
+        const currentGrade = playData.context ? playData.context.grade : (playData.questions && playData.questions.length > 0 ? playData.questions[0].grade : '');
+        const gradeMultiplier = getGradeMultiplier(currentGrade);
+        earned = Math.floor((partA + partB + partC) * gradeMultiplier);
         gameState.xp += earned;
         if (playData.context && !playData.isRevenge && !playData.isRandom) {
             const key = `${playData.context.grade}_${playData.context.subject}_${playData.context.unit}`;
