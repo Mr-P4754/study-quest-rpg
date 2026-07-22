@@ -257,12 +257,14 @@ async function fetchData() {
         for (let key in data) {
             const lowerKey = key.toLowerCase();
             try {
+                // 【修正】複数シートの対応として、questionsを結合(concat)して上書きを防ぐ
                 if (lowerKey.includes('questions') || lowerKey.includes('question')) {
-                    rawData.questions = data[key].filter(d => d).map(q => {
+                    const newQs = data[key].filter(d => d).map(q => {
                         const qText = getVal(q, ['q', 'question', '問題', '問題文']); const aText = getVal(q, ['a', 'answer', '正解']);
                         let hash = 0; const str = qText + aText; for (let i = 0; i < str.length; i++) { hash = ((hash << 5) - hash) + str.charCodeAt(i); hash |= 0; }
                         return { id: "q_" + Math.abs(hash), grade: getVal(q, ['grade', '学年']), subject: getVal(q, ['subject', '教科']), unit: getVal(q, ['unit', '単元']), q: qText, a: aText, choices: q.choices ? String(q.choices).split(',') : [ getVal(q, ['誤答1']), getVal(q, ['誤答2']), getVal(q, ['誤答3']), getVal(q, ['a', '正解']) ].filter(x => x !== "") };
                     });
+                    rawData.questions = rawData.questions.concat(newQs);
                 } else if (lowerKey.includes('character')) {
                     rawData.characters = data[key].filter(d => d).map(c => { const name = getVal(c, ['name', '名前']) || "Unknown"; return { id: String(c.id || c.ID || generateHashId(name, 'chara')), name: name, rarity: getVal(c, ['rarity', 'レア']) || "N", type: getVal(c, ['type', 'タイプ']) || "ATK", value: Number(getVal(c, ['value', '補正値', '効果値']) || 1.0), desc: getVal(c, ['desc', '解説']), imageUrl: convertDriveUrl(getVal(c, ['imageUrl', '画像URL', '画像'])) }; });
                 } else if (lowerKey.includes('boss')) {
