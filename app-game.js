@@ -9,12 +9,12 @@ function getGradeMultiplier(gradeStr) {
     if (g.includes('中3')) return 1.90;
     if (g.includes('中2')) return 1.80;
     if (g.includes('中1')) return 1.70;
-    if (g.includes('6')) return 1.60;
-    if (g.includes('5')) return 1.50;
-    if (g.includes('4')) return 1.40;
-    if (g.includes('3')) return 1.30;
-    if (g.includes('2')) return 1.10;
-    return 1.00; // 1年 or 学年不明
+    if (g.includes('小6')) return 1.60;
+    if (g.includes('小5')) return 1.50;
+    if (g.includes('小4')) return 1.40;
+    if (g.includes('小3')) return 1.30;
+    if (g.includes('小2')) return 1.10;
+    return 1.00; // 小1 or 学年不明
 }
 
 function showCutIn(t) { 
