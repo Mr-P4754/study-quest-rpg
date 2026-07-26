@@ -249,21 +249,23 @@ async function fetchData() {
         const getVal = (obj, keys) => { for (const k of keys) { const v = obj[k]; if (v !== undefined && v !== null && v !== "") return String(v); } return ""; };
         const getFuzzyVal = (obj, keyword, defaultVal) => { const key = Object.keys(obj).find(k => k.includes(keyword)); const val = key ? obj[key] : ""; return (val !== undefined && val !== null && val !== "") ? String(val) : defaultVal; };
         const convertDriveUrl = (url) => { if(!url || !url.startsWith('http')) return url; if(url.includes('drive.google.com') && (url.includes('/file/d/') || url.includes('id='))) { let id = ""; const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/); if(match1) id = match1[1]; else { const match2 = url.match(/id=([a-zA-Z0-9_-]+)/); if(match2) id = match2[1]; } if(id) return `https://drive.google.com/thumbnail?sz=w1000&id=${id}`; } return url; };
+        onst convertDriveUrl = (url) => { if(!url || !url.startsWith('http')) return url; if(url.includes('drive.google.com') && (url.includes('/file/d/') || url.includes('id='))) { let id = ""; const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/); if(match1) id = match1[1]; else { const match2 = url.match(/id=([a-zA-Z0-9_-]+)/); if(match2) id = match2[1]; } if(id) return `https://drive.google.com/thumbnail?sz=w1000&id=${id}`; } return url; };
+        
+        // 以下の convertDriveAudioUrl を元の「uc?export=download」形式に戻します
         const convertDriveAudioUrl = (url) => { 
-    if(!url || !url.startsWith('http')) return url; 
-    if(url.includes('drive.google.com') && (url.includes('/file/d/') || url.includes('id='))) { 
-        let id = ""; 
-        const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/); 
-        if(match1) id = match1[1]; 
-        else { 
-            const match2 = url.match(/id=([a-zA-Z0-9_-]+)/); 
-            if(match2) id = match2[1]; 
-        } 
-        // 従来形式（uc?export=download）から、メディア直接配信形式（lh3.googleusercontent.com/d/）に変更
-        if(id) return `https://lh3.googleusercontent.com/d/${id}`; 
-    } 
-    return url; 
-};
+            if(!url || !url.startsWith('http')) return url; 
+            if(url.includes('drive.google.com') && (url.includes('/file/d/') || url.includes('id='))) { 
+                let id = ""; 
+                const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/); 
+                if(match1) id = match1[1]; 
+                else { 
+                    const match2 = url.match(/id=([a-zA-Z0-9_-]+)/); 
+                    if(match2) id = match2[1]; 
+                } 
+                if(id) return `https://drive.google.com/uc?export=download&id=${id}`; 
+            } 
+            return url; 
+        };
         
         rawData = { questions: [], characters: [], bosses: [], shopItems: [], typing: [], randomBosses: [], config: [], gifts: [] };
         const generateHashId = (str, prefix) => { let hash = 0; for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash) + str.charCodeAt(i) | 0; return prefix + "_" + Math.abs(hash); };
