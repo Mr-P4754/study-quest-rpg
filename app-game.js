@@ -91,6 +91,8 @@ async function retryGame() {
     else if (playData.isSurvival) { startSurvivalGame(); }
     else if (playData.isRandom) { startRandomGame(); }
     else if (playData.activeOaths && playData.activeOaths.length > 0) { startOathGame(); }
+    // 【追加】救済モードのリトライ対応
+    else if (playData.activeReliefs && playData.activeReliefs.length > 0) { startReliefGame(); }
     else if (playData.isRevenge) { startRevengeMode(); }
     else if (typeof rogueData !== 'undefined' && rogueData.active) { alert("探索モード中はリトライできません。"); resumeGame(); }
     else { startGame(); }
@@ -176,6 +178,8 @@ function getCharaStats() {
         });
     }
     if (playData.activeOaths && playData.activeOaths.includes('weak') && !playData.isSurvival) stats.atk *= 0.5;
+    // 【追加】力の救済（攻撃力2倍）
+    if (playData.activeReliefs && playData.activeReliefs.includes('power') && !playData.isSurvival) stats.atk *= 2.0;
 
     // ローグライクモードでのバフフック対応
     if (typeof rogueData !== 'undefined' && rogueData.active) {
@@ -482,6 +486,13 @@ function finishGame(isClear) {
         const gradeMultiplier = getGradeMultiplier(currentGrade);
         let earnedExp = Math.floor(((correctCount * oathMultiplier) + milestoneBonus) * gradeMultiplier);
         
+        // 【追加】救済オプション数に応じたEXP減少補正
+        if (playData.activeReliefs && playData.activeReliefs.length > 0) {
+            const rCount = playData.activeReliefs.length;
+            const penalty = rCount >= 3 ? 0.5 : (rCount === 2 ? 0.7 : 0.9);
+            earnedExp = Math.floor(earnedExp * penalty);
+        }
+        
         let growthResultText = "なし";
         
         if (eqInv && cMaster) {
@@ -616,6 +627,14 @@ function finishGame(isClear) {
         const currentGrade = playData.context ? playData.context.grade : (playData.questions && playData.questions.length > 0 ? playData.questions[0].grade : '');
         const gradeMultiplier = getGradeMultiplier(currentGrade);
         earned = Math.floor((partA + partB + partC) * gradeMultiplier);
+        
+        // 【追加】救済オプション数に応じたEXP減少補正
+        if (playData.activeReliefs && playData.activeReliefs.length > 0) {
+            const rCount = playData.activeReliefs.length;
+            const penalty = rCount >= 3 ? 0.5 : (rCount === 2 ? 0.7 : 0.9);
+            earned = Math.floor(earned * penalty);
+        }
+        
         gameState.xp += earned;
         if (playData.context && !playData.isRevenge && !playData.isRandom) {
             const key = `${playData.context.grade}_${playData.context.subject}_${playData.context.unit}`;
