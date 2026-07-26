@@ -216,9 +216,10 @@
                 <option value="10000">ボスHP: 10000</option>
             </select>
         </div>
+        <button class="menu-btn" style="background:#e67e22; width:100%; margin-bottom:10px;" onclick="startNormalGameCheck()">通常出撃</button>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <button class="menu-btn" style="background:#e67e22;" onclick="startNormalGameCheck()">通常出撃</button>
             <button class="menu-btn oath" style="background:#8e44ad; border-color:#6c3483;" onclick="goToOathMenuCheck()">😈 誓約へ</button>
+            <button class="menu-btn relief" style="background:#3498db; border-color:#2980b9;" onclick="goToReliefMenuCheck()">🕊️ 救済へ</button>
         </div>
         <button class="menu-btn" style="margin-top:15px; background:#95a5a6;" onclick="closeUnitSelection()">キャンセル</button>
     </div>
@@ -232,9 +233,10 @@
             <label style="font-weight:bold; color:#2c3e50;">挑戦する学年</label>
             <select id="survival-grade-select" class="select-box" style="width:100%; margin-top:5px; font-size:1.1em; padding:10px;"><option value="">学年を選択...</option></select>
         </div>
+        <button class="menu-btn" style="background:#e74c3c; width:100%; margin-bottom:10px;" onclick="oathOrigin='normal'; startSurvivalGame()">特訓開始</button>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <button class="menu-btn" style="background:#e74c3c;" onclick="oathOrigin='normal'; startSurvivalGame()">特訓開始</button>
             <button class="menu-btn oath" style="background:#8e44ad; border-color:#6c3483;" onclick="goToOathMenuSurvivalCheck()">😈 誓約へ</button>
+            <button class="menu-btn relief" style="background:#3498db; border-color:#2980b9;" onclick="goToReliefMenuSurvivalCheck()">🕊️ 救済へ</button>
         </div>
         <button class="menu-btn" style="margin-top:10px; background:#95a5a6;" onclick="closeSurvivalMenu()">やめる</button>
     </div>
@@ -423,6 +425,7 @@
 </div>
 
 <div id="oath-overlay" class="overlay hidden" style="z-index: 290;">
+    <!-- (既存のoath-overlayの中身そのまま) -->
     <div class="modal" style="max-width:400px;">
         <h2 id="oath-title" style="color:#8e44ad; margin-top:0;">😈 誓約の儀</h2>
         <p id="oath-desc" style="font-size:0.9em;">自らにハンデを課し、高みを目指せ。<br>（報酬EXP <span style="color:#e67e22; font-weight:bold;">1.5〜2.0倍</span>）</p>
@@ -439,6 +442,27 @@
         </div>
         <button class="menu-btn" style="background:#8e44ad;" onclick="startOathGame()">この条件で出撃</button>
         <button class="menu-btn" style="margin-top:10px; background:#95a5a6;" onclick="closeOathMenu()">やめる</button>
+    </div>
+</div>
+
+<!-- 新規追加: 救済の儀オーバーレイ -->
+<div id="relief-overlay" class="overlay hidden" style="z-index: 290;">
+    <div class="modal" style="max-width:400px;">
+        <h2 id="relief-title" style="color:#3498db; margin-top:0;">🕊️ 救済の儀</h2>
+        <p id="relief-desc" style="font-size:0.9em;">加護を受け、確実に試練を乗り越える。<br>（報酬EXP <span style="color:#e74c3c; font-weight:bold;">×0.9 ～ ×0.5</span>）</p>
+        <div class="oath-options">
+            <div class="oath-option" id="relief-time" onclick="toggleRelief('time')">
+                <div class="oath-icon">⏳</div><div><div class="oath-name">時間の救済</div><div class="oath-desc">制限時間が「2倍」になる</div></div>
+            </div>
+            <div class="oath-option" id="relief-life" onclick="toggleRelief('life')">
+                <div class="oath-icon">💖</div><div><div class="oath-name">生命の救済</div><div class="oath-desc">ライフが「5」になる</div></div>
+            </div>
+            <div class="oath-option" id="relief-power" onclick="toggleRelief('power')">
+                <div class="oath-icon">💪</div><div><div class="oath-name">力の救済</div><div class="oath-desc">与えるダメージが「2倍」になる</div></div>
+            </div>
+        </div>
+        <button class="menu-btn" style="background:#3498db; border-color:#2980b9;" onclick="startReliefGame()">この条件で出撃</button>
+        <button class="menu-btn" style="margin-top:10px; background:#95a5a6;" onclick="closeReliefMenu()">やめる</button>
     </div>
 </div>
 
