@@ -21,9 +21,10 @@ function showCutIn(t) {
     const d = document.createElement('div'); 
     d.className='cutin'; 
     d.innerText=t; 
-    if(String(t).includes('MISS')) { 
-        d.style.color='#bdc3c7'; 
-        d.style.webkitTextStroke='2px #2c3e50'; 
+    // 【変更】「✕」の場合に色を青ベースに変更
+    if(String(t).includes('✕')) { 
+        d.style.color='#3498db'; 
+        d.style.webkitTextStroke='2px #1f618d'; 
     } 
     document.body.appendChild(d); 
     setTimeout(()=>d.remove(), 1500); 
@@ -227,7 +228,7 @@ function judge(isCorrect, btn) {
     if(isCorrect) {
         playSE('hit');
         if (playData.isRevenge && playData.currentQ && playData.currentQ.id) { gameState.revengeList = gameState.revengeList.filter(id => String(id) !== String(playData.currentQ.id)); saveGame(); }
-        document.querySelectorAll('.choice-btn').forEach(b => { if(String(b.innerText) === String(playData.currentQ?.a)) b.classList.add('btn-miss-answer'); });
+        // 【修正】正解時の誤答ボタン赤色点滅処理を削除
         
         let damage = 0;
         if (playData.isSurvival) {
@@ -251,7 +252,7 @@ function judge(isCorrect, btn) {
         if ((gameState.maxTime - gameState.timeLeft) <= 1.0) { gameState.stats.achieved_speed = true; saveGame(); }
         
         const enemyIcon = document.getElementById('ui-enemy-icon'); if(enemyIcon) { enemyIcon.classList.remove('shake-anim'); void enemyIcon.offsetWidth; enemyIcon.classList.add('shake-anim'); }
-        updateMissionProgress('correct', 1); updateMissionProgress('maxCombo', gameState.combo); updateUI();
+        if(typeof updateMissionProgress === 'function') { updateMissionProgress('correct', 1); updateMissionProgress('maxCombo', gameState.combo); } updateUI();
         
         if(!playData.isSurvival && gameState.enemyHP <= 0) { 
             const enemyBox = document.querySelector('.enemy-visual-box'); if(enemyBox) { enemyBox.classList.add('anim-paused'); enemyBox.classList.add('fade-out'); } 
@@ -260,7 +261,8 @@ function judge(isCorrect, btn) {
             playData.qIndex++; setTimeout(() => isGameActive && nextQuestion(), 1000); 
         }
     } else {
-        gameState.lives--; gameState.combo = 0; showCutIn("MISS..."); updateUI();
+        // 【修正】「MISS...」を「✕」に変更
+        gameState.lives--; gameState.combo = 0; showCutIn("✕"); updateUI();
         if(gameState.lives <= 0) { setTimeout(() => isGameActive && finishGame(false), 1500); } else { setTimeout(() => { if(!isGameActive) return; if(playData.isTyping) nextTypingQuestion(); else nextQuestion(); }, 1500); }
     }
 }
@@ -308,7 +310,8 @@ function handleTypingInput(e) {
             const enemyIcon = document.getElementById('ui-enemy-icon'); if(enemyIcon) { enemyIcon.classList.remove('shake-anim'); void enemyIcon.offsetWidth; enemyIcon.classList.add('shake-anim'); } updateUI();
             if(gameState.enemyHP <= 0) { setTimeout(() => isGameActive && finishGame(true), 500); } else { playData.qIndex++; setTimeout(() => { if(isGameActive) nextTypingQuestion(); }, 200); }
         }
-    } else { playSE('type_miss'); if (!playData.typingMissed) { gameState.lives--; playData.typingMissed = true; } gameState.combo = 0; showCutIn("MISS"); updateUI(); const romeBox = document.getElementById('ui-typing-romaji'); if(romeBox) { romeBox.classList.add('shake-anim'); setTimeout(()=>romeBox.classList.remove('shake-anim'), 400); } if(gameState.lives <= 0) { finishGame(false); } }
+    // 【修正】「MISS」を「✕」に変更
+    } else { playSE('type_miss'); if (!playData.typingMissed) { gameState.lives--; playData.typingMissed = true; } gameState.combo = 0; showCutIn("✕"); updateUI(); const romeBox = document.getElementById('ui-typing-romaji'); if(romeBox) { romeBox.classList.add('shake-anim'); setTimeout(()=>romeBox.classList.remove('shake-anim'), 400); } if(gameState.lives <= 0) { finishGame(false); } }
 }
 
 function generateCalcQuestion(type) {
@@ -346,7 +349,8 @@ function submitCalcAnswer() {
     if (isCorrect) {
         playSE('hit'); playData.calcCorrect += 1; gameState.score += 1; if(answerBox) answerBox.classList.add('correct');
         if (enemyIcon) { enemyIcon.classList.remove('shake-anim'); void enemyIcon.offsetWidth; enemyIcon.classList.add('shake-anim'); } showCutIn('GOOD!');
-    } else { playSE('miss'); if(answerBox) answerBox.classList.add('wrong'); showCutIn('MISS'); }
+    // 【修正】「MISS」を「✕」に変更
+    } else { playSE('miss'); if(answerBox) answerBox.classList.add('wrong'); showCutIn('✕'); }
     
     playData.calcQIndex += 1; 
     playData.calcInput = ''; 
