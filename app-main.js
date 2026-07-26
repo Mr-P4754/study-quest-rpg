@@ -61,15 +61,25 @@ function updateTitleInfo() {
         if(chara?.imageUrl && chara.imageUrl.startsWith('http')) imgContainer.innerHTML = `<img src="${chara.imageUrl}" style="width:100%;height:100%;object-fit:cover;">`;
         else imgContainer.innerHTML = `<div style="text-align:center;line-height:40px;">✏️</div>`;
     }
-    const rBtn = document.getElementById('btn-revenge'); const rCount = (gameState.revengeList || []).length;
-    if(rBtn) {
-        if (rCount > 0) { rBtn.disabled = false; rBtn.innerHTML = `💀 リベンジ・ダンジョン <div class="badge">${rCount}</div>`; } else { rBtn.disabled = true; rBtn.innerHTML = `💀 リベンジ・ダンジョン <div class="badge hidden">0</div>`; }
+    
+    // --- 修正: HTML構造の破壊を防ぎバッジのみ更新 ---
+    const rBadge = document.getElementById('revenge-badge'); 
+    const rCount = (gameState.revengeList || []).length;
+    if(rBadge) {
+        if (rCount > 0) { rBadge.innerText = rCount; rBadge.classList.remove('hidden'); } 
+        else { rBadge.innerText = '0'; rBadge.classList.add('hidden'); }
+        const rBtn = rBadge.closest('button');
+        if (rBtn) rBtn.disabled = (rCount === 0);
     }
+    // ------------------------------------------------
+
     const banner = document.getElementById('campaign-banner'); const bannerText = document.getElementById('campaign-text');
     let activeConfigs = []; if (rawData.config) activeConfigs = rawData.config.filter(c => c.message && c.message !== "");
     if(banner && bannerText) {
         if (activeConfigs.length > 0) { banner.classList.remove('hidden'); banner.style.display = 'block'; const combinedText = activeConfigs.map(c => `📢 ${c.message} （強化対象: ${c.grade} ${c.subject} ${c.unit}）`).join("   "); bannerText.innerText = combinedText; } else { banner.style.display = 'none'; }
     }
+    
+    if (typeof updateCategoryBadges === 'function') updateCategoryBadges();
 }
 
 function checkTitles() {
@@ -122,6 +132,9 @@ function checkTitles() {
     if(badge) {
         if(count > 0) { badge.classList.remove('hidden'); badge.innerText = count > 9 ? '!' : count; } else { badge.classList.add('hidden'); }
     }
+
+    // 大カテゴリーのバッジ状態を更新
+    updateCategoryBadges();
 }
 
 function openTitles() { document.getElementById('titles-overlay')?.classList.remove('hidden'); renderTitles(); }
@@ -213,6 +226,8 @@ function updateMissionBadge() {
     let c=0; 
     MISSIONS.forEach(m=>{ if((dailyMissions.progress[m.id]||0)>=m.target && !dailyMissions.claimed[m.id]) c++; }); 
     document.getElementById('mission-badge')?.classList.toggle('hidden', c===0); 
+    
+    updateCategoryBadges(); // カテゴリーバッジ連動
 }
 
 function openMissions() { document.getElementById('mission-overlay')?.classList.remove('hidden'); renderMissions(); }
@@ -249,6 +264,32 @@ function claimAllClear() {
     dailyMissions.claimed.allClear=true; 
     gameState.xp+=MISSION_ALL_CLEAR; saveGame(); renderMissions(); updateTitleInfo(); updateMissionBadge(); 
     alert(MISSION_ALL_CLEAR+"EXP獲得"); 
+}
+
+// ==========================================
+// Ver 9.0.0 追加: カテゴリーバッジ連動処理
+// ==========================================
+function updateCategoryBadges() {
+    // スペシャルクエストのバッジ (リベンジ連動)
+    const revenge = document.getElementById('revenge-badge');
+    const badgeSpecial = document.getElementById('badge-special');
+    if (badgeSpecial) {
+        if (revenge && !revenge.classList.contains('hidden')) badgeSpecial.classList.remove('hidden');
+        else badgeSpecial.classList.add('hidden');
+    }
+
+    // 実績・ギフトのバッジ (MISSION, 称号, ギフト連動)
+    const mission = document.getElementById('mission-badge');
+    const title = document.getElementById('title-badge');
+    const gift = document.getElementById('gift-badge');
+    const badgeAchievement = document.getElementById('badge-achievement');
+    if (badgeAchievement) {
+        const hasMission = mission && !mission.classList.contains('hidden');
+        const hasTitle = title && !title.classList.contains('hidden');
+        const hasGift = gift && !gift.classList.contains('hidden');
+        if (hasMission || hasTitle || hasGift) badgeAchievement.classList.remove('hidden');
+        else badgeAchievement.classList.add('hidden');
+    }
 }
 
 // ==========================================
