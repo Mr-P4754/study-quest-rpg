@@ -41,10 +41,11 @@ function startRogueMode() {
     rogueData.exploreLevel = 1;
     rogueData.atkBuff = 1.0;
     rogueData.bonusSteps = 0;
+    rogueData.maxLives = 3; // 修正: 最大ライフの概念を追加
     rogueData.active = true;
     rogueData.isAnimating = false;
     rogueData.shopBought = false;
-    gameState.lives = 3; 
+    gameState.lives = rogueData.maxLives; // 修正: 初期ライフを設定
     
     document.getElementById('rogue-menu-overlay')?.classList.add('hidden');
     document.getElementById('title-screen').classList.add('hidden');
@@ -191,16 +192,17 @@ function processRogueTile(tile) {
             triggerRogueBattle(true);
             break;
         case ROGUE_TILES.FOUNTAIN:
-            gameState.lives = Math.min(3, gameState.lives + 1);
-            showRogueCutIn("ライフ❤️ +1"); // ← 変更
+            if (!rogueData.maxLives) rogueData.maxLives = 3; // 安全対策
+            gameState.lives = Math.min(rogueData.maxLives, gameState.lives + 1); // 修正: 上限をmaxLivesに依存
+            showRogueCutIn("ライフ❤️ +1");
             break;
         case ROGUE_TILES.BOOK:
             rogueData.exploreLevel++;
-            showRogueCutIn("探索レベル📜UP"); // ← 変更
+            showRogueCutIn("探索レベル📜UP");
             break;
         case ROGUE_TILES.TRAP:
             rogueData.exploreLevel = Math.max(1, rogueData.exploreLevel - 1);
-            showRogueCutIn("探索レベル📜DOWN"); // ← 変更
+            showRogueCutIn("探索レベル📜DOWN");
             break;
         case ROGUE_TILES.STATUE: {
             const buff = Math.floor(Math.random() * 5) + 1;
@@ -245,7 +247,7 @@ function renderRogueShopContents() {
     `;
 
     const rogueItems = [
-        { id: 'r_heal', name: 'ライフ回復薬', price: 10000, desc: 'ライフを1回復する', icon: '❤️', action: 'buyRogueHeal' },
+        { id: 'r_heal', name: 'ライフ上限UP薬', price: 30000, desc: '最大ライフ枠と現在ライフを+1', icon: '❤️', action: 'buyRogueHeal' }, // 修正: 名前・価格・効果説明を変更
         { id: 'r_atk', name: '攻撃の秘薬', price: 20000, desc: '攻撃バフ倍率を +0.5 上昇', icon: '⚔️', action: 'buyRogueAtk' },
         { id: 'r_step', name: '韋駄天の靴', price: 30000, desc: '残り歩数上限を +10 追加する', icon: '👟', action: 'buyRogueSteps' }
     ];
@@ -273,7 +275,11 @@ function buyRogueHeal(price) {
     if (rogueData.shopBought || rogueData.earnedXp < price) return;
     rogueData.earnedXp -= price;
     rogueData.shopBought = true; // 購入済みにする
-    gameState.lives = Math.min(3, gameState.lives + 1);
+    
+    if (!rogueData.maxLives) rogueData.maxLives = 3;
+    rogueData.maxLives += 1; // 修正: 最大ライフを拡張
+    gameState.lives += 1;    // 修正: 現在のライフを回復
+    
     playSE('hit');
     renderRogueShopContents();
     updateRogueUI();
@@ -418,7 +424,7 @@ function triggerRogueBattle(isBoss = false) {
     playData.questions = qList;
     playData.qIndex = 0;
 
-    // 【修正】敵キャラの名前にレア度表示を追加
+    // 敵キャラの名前にレア度表示を追加
     let rarityText = `[${enemyChar.rarity}] `;
     let bossName = isBoss ? `${rogueData.floor}F ボス: ${rarityText}${enemyChar.name}` : `${rarityText}${enemyChar.name}`;
     let iconUrl = (enemyChar.imageUrl && enemyChar.imageUrl.startsWith('http')) ? enemyChar.imageUrl : "👾";
@@ -429,7 +435,7 @@ function triggerRogueBattle(isBoss = false) {
     // 5階層ごとのボス戦では誓約をランダムに1つ発動
     playData.activeOaths = [];
     if (isBoss && rogueData.floor % 5 === 0) {
-        const oaths = ['rapid', 'backwater', 'weak'];
+        const oaths = ['rapid', 'weak']; // 修正: 'backwater'（ライフ1）を除外
         playData.activeOaths = [ oaths[Math.floor(Math.random() * oaths.length)] ];
     }
 
@@ -449,8 +455,7 @@ function triggerRogueBattle(isBoss = false) {
     if (playData.activeOaths.includes('rapid')) gameState.maxTime *= 0.5;
     gameState.timeLeft = gameState.maxTime; 
     
-    // 背水の誓約があればライフを1にする
-    gameState.lives = playData.activeOaths.includes('backwater') ? 1 : 3;
+    // 修正: gameState.livesの初期化（=3等）を撤廃し、戦闘前のライフ状態を引き継ぐ
 
     isGameActive = false;
     isPaused = false;
