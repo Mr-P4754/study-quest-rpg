@@ -150,7 +150,8 @@ function moveRoguePlayer(dx, dy) {
     }
 
     // イベント発生で戦闘画面に移行していない場合のみ歩数切れチェック
-    if (rogueData.steps <= 0 && tile !== ROGUE_TILES.STAIRS && rogueData.active && document.getElementById('game-screen').classList.contains('hidden')) {
+    // 【修正】敵出現アニメーション中 (!rogueData.isAnimating) の場合は強制送還チェックを保留する
+    if (rogueData.steps <= 0 && tile !== ROGUE_TILES.STAIRS && rogueData.active && !rogueData.isAnimating && document.getElementById('game-screen').classList.contains('hidden')) {
         showAppModal("歩数がゼロになりました。拠点に強制送還されます。", "alert").then(() => {
             exitRogueSystem(false);
         });
@@ -488,6 +489,7 @@ function showRogueCutIn(t) {
     d.style.position = 'absolute';
     d.style.top = '40px'; // 歩数や階層の下（キャンバス上部）
     d.style.left = '50%';
+    d.style.transform = 'translateX(-50%)'; // 【追加】横方向の中央揃え
     d.style.fontSize = '1.2em';
     d.style.fontWeight = 'bold';
     d.style.color = '#f1c40f';
