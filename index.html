@@ -24,28 +24,31 @@
     <div class="title-logo">STUDY QUEST</div>
     <div class="version-text" onclick="openVersionHistory()">Ver 9.0.0</div>
     
-    <div class="menu-btn-container">
-        <button class="menu-btn" style="background:#e74c3c; border-color:#c0392b;" onclick="openCategory('main')">
-            ▶ メインクエスト
-            <div id="badge-main" class="badge hidden">!</div>
+    <!-- 修正: 大カテゴリーを説明文付きのリッチボタン化し、1列レイアウトに変更 -->
+    <div class="menu-btn-container" style="grid-template-columns: 1fr; gap: 10px; max-height: 55vh; overflow-y: auto; padding: 5px;">
+        <button class="rich-menu-btn" style="border-left: 6px solid #e74c3c;" onclick="openCategory('main')">
+            <div class="rich-btn-title" style="display:flex; align-items:center;">▶ メインクエスト <div id="badge-main" class="badge hidden" style="position:static; margin-left:8px; width:20px; height:20px; font-size:0.8em;">!</div></div>
+            <div class="rich-btn-desc">基本の学習からPC専用タイピングまで！</div>
         </button>
-        <button class="menu-btn" style="background:#8e44ad; border-color:#6c3483;" onclick="openCategory('special')">
-            ✨ スペシャルクエスト
-            <div id="badge-special" class="badge hidden">!</div>
+        <button class="rich-menu-btn" style="border-left: 6px solid #8e44ad;" onclick="openCategory('special')">
+            <div class="rich-btn-title" style="display:flex; align-items:center;">✨ スペシャルクエスト <div id="badge-special" class="badge hidden" style="position:static; margin-left:8px; width:20px; height:20px; font-size:0.8em;">!</div></div>
+            <div class="rich-btn-desc">大量XP獲得！ローグライクやタイムアタック！</div>
         </button>
-        <button class="menu-btn multi-line" style="background:#f39c12; border-color:#d35400; color:#fff;" onclick="openCategory('gacha')">
-            <span>💎 ガチャ</span>
-            <span>📖 図鑑 / 🛒 ショップ</span>
+        <button class="rich-menu-btn" style="border-left: 6px solid #f39c12;" onclick="openCategory('gacha')">
+            <div class="rich-btn-title">💎 ガチャ・図鑑</div>
+            <div class="rich-btn-desc">XPを使って新たな文房具キャラをゲット！</div>
         </button>
-        <button class="menu-btn" style="background:#27ae60; border-color:#1e8449;" onclick="openCategory('achievement')">
-            🏆 実績・ギフト
-            <div id="badge-achievement" class="badge hidden">!</div>
+        <button class="rich-menu-btn" style="border-left: 6px solid #27ae60;" onclick="openCategory('achievement')">
+            <div class="rich-btn-title" style="display:flex; align-items:center;">🏆 実績・ギフト <div id="badge-achievement" class="badge hidden" style="position:static; margin-left:8px; width:20px; height:20px; font-size:0.8em;">!</div></div>
+            <div class="rich-btn-desc">ミッション報酬や称号、ギフトの受け取り！</div>
         </button>
-        <button class="menu-btn" style="background:#3498db; border-color:#2980b9;" onclick="openSyncMenu()">
-            ☁️ データ管理
+        <button class="rich-menu-btn" style="border-left: 6px solid #3498db;" onclick="openSyncMenu()">
+            <div class="rich-btn-title">☁️ データ管理</div>
+            <div class="rich-btn-desc">データのバックアップや引き継ぎ設定！</div>
         </button>
-        <button class="menu-btn" style="background:#1abc9c; border-color:#16a085;" onclick="openCategory('guide')">
-            📖 プレイガイド
+        <button class="rich-menu-btn" style="border-left: 6px solid #1abc9c;" onclick="openCategory('guide')">
+            <div class="rich-btn-title">📖 プレイガイド</div>
+            <div class="rich-btn-desc">遊び方の詳細やアップデート履歴の確認！</div>
         </button>
     </div>
     
