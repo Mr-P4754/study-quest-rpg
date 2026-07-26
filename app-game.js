@@ -802,56 +802,28 @@ function playSE(type) {
 }
 
 const BGM_MML = "T150 L8 O3 G G > C C D C E F G G A G F E D C < B > C4 R4";
-let bgmOscillators = []; let bgmTimeout = null;
-let currentBgmAudio = null;
-let currentBgmUrl = null;
+let bgmOscillators = []; 
+let bgmTimeout = null;
+
+// 外部Audio用の変数を削除（currentBgmAudio, currentBgmUrl）
 
 function playBGM() {
     if (isMuted) return; 
     
-    if (audioCtx.state === 'suspended') { audioCtx.resume().catch(e => console.warn('BGM resume blocked', e)); }
-    
-    let bgmUrl = null;
-    const config = (rawData.config && rawData.config.length > 0) ? rawData.config[0] : {};
-
-    if (typeof rogueData !== 'undefined' && rogueData.active && document.getElementById('game-screen')?.classList.contains('hidden')) {
-        bgmUrl = config.exploreBgm;
-    } else if (isGameActive) {
-        if (playData.currentBoss && playData.currentBoss.bgmUrl) { bgmUrl = playData.currentBoss.bgmUrl; }
-        else if (playData.isSurvival && config.survivalBgm) { bgmUrl = config.survivalBgm; }
-        else if (playData.isTyping && config.typingBgm) { bgmUrl = config.typingBgm; }
-        else if (playData.isCalculation && config.calcBgm) { bgmUrl = config.calcBgm; }
-        else if (playData.isRandom && config.randomBgm) { bgmUrl = config.randomBgm; }
-        else if (playData.isRevenge && config.revengeBgm) { bgmUrl = config.revengeBgm; }
-        else { bgmUrl = config.defaultBattleBgm; }
-    }
-
-    // ★最適化: 同じBGMが既に流れている場合は、リセットせずにそのまま継続する
-    if (bgmUrl && currentBgmAudio && currentBgmUrl === bgmUrl && !currentBgmAudio.paused) {
-        return;
+    if (audioCtx.state === 'suspended') { 
+        audioCtx.resume().catch(e => console.warn('BGM resume blocked', e)); 
     }
     
-    stopBGM(); // ここで一旦今のBGMを止める
-
-    if (bgmUrl) {
-        currentBgmAudio = new Audio(bgmUrl);
-        currentBgmUrl = bgmUrl;
-        currentBgmAudio.loop = true;
-        currentBgmAudio.volume = 0.3;
-        currentBgmAudio.play().catch(e => { 
-            // 【変更】エラーをコンソールに出力し、原因を特定しやすくする
-            console.error("【BGM再生エラー】", e.name, e.message, "URL:", bgmUrl);
-            playMmlBGM(); 
-        });
-    } else {
-        playMmlBGM();
-    }
+    stopBGM(); // 既存のBGM（電子音）を停止してから新しい再生を開始
+    playMmlBGM();
 }
 
 function stopBGM() { 
-    if (currentBgmAudio) { currentBgmAudio.pause(); currentBgmAudio.currentTime = 0; currentBgmAudio = null; }
-    currentBgmUrl = null;
-    if (bgmTimeout) clearTimeout(bgmTimeout); bgmOscillators.forEach(osc => { try { osc.stop(); } catch(e){} }); bgmOscillators = []; 
+    if (bgmTimeout) clearTimeout(bgmTimeout); 
+    bgmOscillators.forEach(osc => { 
+        try { osc.stop(); } catch(e){} 
+    }); 
+    bgmOscillators = []; 
 }
 
 function playMmlBGM() {
