@@ -591,10 +591,14 @@ function finishGame(isClear) {
             playSE('win');
             const eqInv = gameState.charaInventory[gameState.equipped];
             if (eqInv) {
-                eqInv.exp = (Number(eqInv.exp) || 0) + 1;
                 const cMaster = rawData.characters ? rawData.characters.find(c => c.id == gameState.equipped) : null;
                 const maxL = RARITY_CAPS[eqInv.currentRarity || (cMaster ? cMaster.rarity : 'N')] || 10;
-                if (eqInv.exp >= EXP_REQ && eqInv.level < maxL) { eqInv.exp -= EXP_REQ; eqInv.level++; }
+                if (eqInv.level < maxL) {
+                    eqInv.exp = (Number(eqInv.exp) || 0) + 1;
+                    if (eqInv.exp >= EXP_REQ) { eqInv.exp -= EXP_REQ; eqInv.level++; }
+                } else {
+                    eqInv.exp = 0; // 最大レベル時はEXPを0に固定しUIの表示崩れを防止
+                }
             }
             if (!playData.isRevenge) {
                 const subj = (playData.context ? playData.context.subject : "") || "";
@@ -718,6 +722,16 @@ function handleResultClose() {
             generateRogueFloor();
         } else {
             if (typeof drawRogueMap === 'function') drawRogueMap();
+            // 戦闘終了時に歩数が0以下だった場合の強制送還チェックを追加
+            if (rogueData.steps <= 0) {
+                setTimeout(() => {
+                    if (typeof showAppModal === 'function') {
+                        showAppModal("歩数がゼロになりました。拠点に強制送還されます。", "alert").then(() => {
+                            if (typeof exitRogueSystem === 'function') exitRogueSystem(false);
+                        });
+                    }
+                }, 100);
+            }
         }
         playBGM();
     } else {
