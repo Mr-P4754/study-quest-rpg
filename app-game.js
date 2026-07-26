@@ -838,7 +838,11 @@ function playBGM() {
         currentBgmUrl = bgmUrl;
         currentBgmAudio.loop = true;
         currentBgmAudio.volume = 0.3;
-        currentBgmAudio.play().catch(e => { playMmlBGM(); });
+        currentBgmAudio.play().catch(e => { 
+            // 【変更】エラーをコンソールに出力し、原因を特定しやすくする
+            console.error("【BGM再生エラー】", e.name, e.message, "URL:", bgmUrl);
+            playMmlBGM(); 
+        });
     } else {
         playMmlBGM();
     }
