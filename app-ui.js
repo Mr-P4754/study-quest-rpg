@@ -61,6 +61,16 @@ function openSyncMenu() {
 function closeSyncMenu() { document.getElementById('sync-overlay')?.classList.add('hidden'); }
 
 /* ------------------------------------------
+ * Ver 9.0.0 追加: カテゴリーメニュー制御
+ * ------------------------------------------ */
+function openCategory(categoryId) {
+    document.getElementById('cat-' + categoryId + '-overlay')?.classList.remove('hidden');
+}
+function closeCategory(categoryId) {
+    document.getElementById('cat-' + categoryId + '-overlay')?.classList.add('hidden');
+}
+
+/* ------------------------------------------
  * 各種モードのメニュー表示・切り替え
  * ------------------------------------------ */
 let oathOrigin = 'normal';
