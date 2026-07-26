@@ -94,10 +94,25 @@ function goToOathMenuCheck() {
     playData.selectedBossHp = Number(hp); closeUnitSelection(); oathOrigin = 'normal'; openOathMenu(); 
 }
 
+function goToReliefMenuCheck() { 
+    const g = document.getElementById('grade-select')?.value; 
+    const s = document.getElementById('subject-select')?.value; 
+    const u = document.getElementById('unit-select')?.value; 
+    const hp = document.getElementById('boss-hp-select')?.value; 
+    if(!g || !s || !u || !hp) return alert("全ての項目を選択してください"); 
+    playData.selectedBossHp = Number(hp); closeUnitSelection(); oathOrigin = 'normal'; openReliefMenu(); 
+}
+
 function goToOathMenuSurvivalCheck() {
     const g = document.getElementById('survival-grade-select')?.value;
     if(!g) return alert("学年を選択してください");
     closeSurvivalMenu(); oathOrigin = 'survival'; openOathMenu();
+}
+
+function goToReliefMenuSurvivalCheck() {
+    const g = document.getElementById('survival-grade-select')?.value;
+    if(!g) return alert("学年を選択してください");
+    closeSurvivalMenu(); oathOrigin = 'survival'; openReliefMenu();
 }
 
 let tempOaths = [];
@@ -124,6 +139,70 @@ function openOathMenu() {
 
 function closeOathMenu() { document.getElementById('oath-overlay')?.classList.add('hidden'); }
 function toggleOath(type) { const el = document.getElementById('oath-' + type); if (tempOaths.includes(type)) { tempOaths = tempOaths.filter(t => t !== type); if(el) el.classList.remove('selected'); } else { tempOaths.push(type); if(el) el.classList.add('selected'); } }
+
+let tempReliefs = [];
+function openReliefMenu() { 
+    tempReliefs = []; 
+    document.querySelectorAll('#relief-overlay .oath-option').forEach(el => el.classList.remove('selected')); 
+    document.getElementById('relief-overlay')?.classList.remove('hidden'); 
+}
+
+function closeReliefMenu() { document.getElementById('relief-overlay')?.classList.add('hidden'); }
+function toggleRelief(type) { 
+    const el = document.getElementById('relief-' + type); 
+    if (tempReliefs.includes(type)) { 
+        tempReliefs = tempReliefs.filter(t => t !== type); 
+        if(el) el.classList.remove('selected'); 
+    } else { 
+        tempReliefs.push(type); 
+        if(el) el.classList.add('selected'); 
+    } 
+}
+
+function startReliefGame() {
+    if (tempReliefs.length === 0) return alert("救済を1つ以上選択してください");
+    tempOaths = []; // 排他のため誓約リセット
+    if (oathOrigin === 'survival') return startSurvivalGame();
+    
+    const g = document.getElementById('grade-select')?.value; const s = document.getElementById('subject-select')?.value; const u = document.getElementById('unit-select')?.value;
+    let qList = rawData.questions ? rawData.questions.filter(q => q.grade == g && q.subject == s && q.unit == u) : [];
+    if(qList.length === 0) return alert("問題がありません");
+    let boss = rawData.bosses ? rawData.bosses.find(b => b.unit == u && b.grade == g) : null;
+    if(!boss) boss = { name: "試練の魔人", hp: 1500, icon: "👿" };
+    
+    if(playData.selectedBossHp) boss.hp = playData.selectedBossHp;
+    
+    playData.questions = qList.sort(() => Math.random() - 0.5); playData.qIndex = 0; playData.currentBoss = boss;
+    playData.isRevenge = false; playData.activeOaths = []; playData.activeReliefs = [...tempReliefs]; playData.isRandom = false; playData.isTyping = false; playData.isCalculation = false; playData.isSurvival = false; playData.context = { grade: g, subject: s, unit: u };
+    
+    const charaStats = getCharaStats();
+    gameState.score = 0; gameState.combo = 0; 
+    gameState.lives = playData.activeReliefs.includes('life') ? 5 : 3;
+    gameState.enemyHP = Number(boss.hp)||3000; gameState.maxHP = gameState.enemyHP; 
+    let timeMulti = playData.activeReliefs.includes('time') ? 2.0 : 1.0; 
+    gameState.maxTime = 10 * charaStats.time * timeMulti;
+    isGameActive = false; isPaused = false;
+    document.getElementById('relief-overlay')?.classList.add('hidden'); document.getElementById('title-screen')?.classList.add('hidden'); document.getElementById('game-screen')?.classList.remove('hidden');
+    
+    document.getElementById('calc-layout')?.classList.add('hidden');
+    document.getElementById('ui-calc-answer')?.classList.add('hidden');
+    document.getElementById('calc-keypad')?.classList.add('hidden');
+    document.getElementById('ui-calc-progress')?.classList.add('hidden');
+    document.getElementById('ui-choices')?.classList.remove('hidden');
+    document.getElementById('ui-typing-area')?.classList.add('hidden');
+    const enemyRow = document.querySelector('.enemy-stats-row'); if(enemyRow) enemyRow.style.display = '';
+    const hpFrame = document.querySelector('.enemy-hp-frame'); if(hpFrame) hpFrame.style.display = '';
+
+    const enemyBox = document.querySelector('.enemy-visual-box'); const enemyIcon = document.getElementById('ui-enemy-icon');
+    if(enemyBox) enemyBox.classList.remove('anim-paused', 'fade-out'); if(enemyIcon) enemyIcon.classList.remove('shake-anim');
+    const uienemyName = document.getElementById('ui-enemy-name'); if(uienemyName) uienemyName.innerText = "【救済】" + boss.name;
+    if(enemyIcon) {
+        if(boss.icon.startsWith('http')) { enemyIcon.innerHTML = `<img src="${boss.icon}">`; } else { enemyIcon.innerHTML = boss.icon; }
+    }
+    const timerBar = document.getElementById('ui-timer'); if(timerBar) timerBar.style.width = '100%'; 
+    const timerText = document.getElementById('ui-timer-text'); if(timerText) timerText.innerText = gameState.maxTime.toFixed(1);
+    updateUI(); startCountdown();
+}
 
 function openRandomMenu() {
     if(!rawData.questions) return;
@@ -176,6 +255,7 @@ function startSurvivalGame() {
     playData.currentBoss = boss;
     playData.isRevenge = false; 
     playData.activeOaths = oathOrigin === 'survival' ? [...tempOaths] : []; 
+    playData.activeReliefs = oathOrigin === 'survival' ? [...tempReliefs] : []; // 追加
     playData.isRandom = false; 
     playData.isTyping = false; 
     playData.isCalculation = false; 
@@ -185,16 +265,19 @@ function startSurvivalGame() {
     const charaStats = getCharaStats();
     gameState.score = 0; 
     gameState.combo = 0; 
-    gameState.lives = playData.activeOaths.includes('backwater') ? 1 : 3; 
+    // 【変更】誓約と救済のライフ反映
+    gameState.lives = playData.activeOaths.includes('backwater') ? 1 : (playData.activeReliefs.includes('life') ? 5 : 3); 
     gameState.enemyHP = boss.hp; 
     gameState.maxHP = boss.hp; 
     
-    let timeMulti = playData.activeOaths.includes('rapid') ? 0.5 : 1.0; 
+    // 【変更】誓約と救済の時間倍率反映
+    let timeMulti = playData.activeOaths.includes('rapid') ? 0.5 : (playData.activeReliefs.includes('time') ? 2.0 : 1.0); 
     gameState.maxTime = 10 * charaStats.time * timeMulti;
     isGameActive = false; isPaused = false;
     
     document.getElementById('survival-overlay')?.classList.add('hidden');
     document.getElementById('oath-overlay')?.classList.add('hidden'); 
+    document.getElementById('relief-overlay')?.classList.add('hidden'); 
     document.getElementById('title-screen')?.classList.add('hidden'); 
     document.getElementById('game-screen')?.classList.remove('hidden'); 
     
@@ -231,7 +314,7 @@ function startGame() {
     if(!boss) boss = { name: "テストの魔人", hp: 3000, icon: "😈" };
     if(playData.selectedBossHp) boss.hp = playData.selectedBossHp;
     playData.questions = qList.sort(() => Math.random() - 0.5); playData.qIndex = 0; playData.currentBoss = boss;
-    playData.isRevenge = false; playData.activeOaths = []; playData.isRandom = false; playData.isTyping = false; playData.isCalculation = false; playData.isSurvival = false; playData.context = { grade: g, subject: s, unit: u };
+    playData.isRevenge = false; playData.activeOaths = []; playData.activeReliefs = []; playData.isRandom = false; playData.isTyping = false; playData.isCalculation = false; playData.isSurvival = false; playData.context = { grade: g, subject: s, unit: u };
     
     const charaStats = getCharaStats();
     gameState.score = 0; gameState.combo = 0; gameState.lives = 3; gameState.enemyHP = Number(boss.hp)||3000; gameState.maxHP = gameState.enemyHP; gameState.maxTime = 10 * charaStats.time;
@@ -266,7 +349,7 @@ function startRevengeMode() {
     if (targetQuestions.length === 0) { alert("復習すべき問題データが見つかりませんでした。"); gameState.revengeList = []; saveGame(); updateTitleInfo(); return; }
     const boss = { name: "忘却の亡霊", hp: targetQuestions.length * 100, icon: "👻" };
     playData.questions = targetQuestions.sort(() => Math.random() - 0.5); playData.qIndex = 0; playData.currentBoss = boss;
-    playData.isRevenge = true; playData.activeOaths = []; playData.isRandom = false; playData.isTyping = false; playData.isCalculation = false; playData.isSurvival = false; playData.context = null;
+    playData.isRevenge = true; playData.activeOaths = []; playData.activeReliefs = []; playData.isRandom = false; playData.isTyping = false; playData.isCalculation = false; playData.isSurvival = false; playData.context = null;
     
     const charaStats = getCharaStats();
     gameState.score = 0; gameState.combo = 0; gameState.lives = 3; gameState.enemyHP = boss.hp; gameState.maxHP = boss.hp; gameState.maxTime = 10 * charaStats.time;
@@ -305,7 +388,7 @@ function startOathGame() {
     if(playData.selectedBossHp) boss.hp = playData.selectedBossHp;
     
     playData.questions = qList.sort(() => Math.random() - 0.5); playData.qIndex = 0; playData.currentBoss = boss;
-    playData.isRevenge = false; playData.activeOaths = [...tempOaths]; playData.isRandom = false; playData.isTyping = false; playData.isCalculation = false; playData.isSurvival = false; playData.context = { grade: g, subject: s, unit: u };
+    playData.isRevenge = false; playData.activeOaths = [...tempOaths]; playData.activeReliefs = []; playData.isRandom = false; playData.isTyping = false; playData.isCalculation = false; playData.isSurvival = false; playData.context = { grade: g, subject: s, unit: u };
     
     const charaStats = getCharaStats();
     gameState.score = 0; gameState.combo = 0; gameState.lives = playData.activeOaths.includes('backwater') ? 1 : 3;
@@ -340,7 +423,7 @@ function startRandomGame() {
     let possibleBosses = []; if (rawData.randomBosses) { possibleBosses = rawData.randomBosses.filter(b => b.grade == g || b.grade == '全学年'); }
     let boss; if (possibleBosses.length > 0) { const b = possibleBosses[Math.floor(Math.random() * possibleBosses.length)]; boss = { name: b.name, hp: Number(b.hp) || 3000, icon: b.icon }; } else { boss = { name: "迷宮のヌシ", hp: 3000, icon: "🐲" }; }
     playData.questions = qList.sort(() => Math.random() - 0.5); playData.qIndex = 0; playData.currentBoss = boss;
-    playData.isRevenge = false; playData.activeOaths = []; playData.isRandom = true; playData.isTyping = false; playData.isCalculation = false; playData.isSurvival = false; playData.context = null;
+    playData.isRevenge = false; playData.activeOaths = []; playData.activeReliefs = []; playData.isRandom = true; playData.isTyping = false; playData.isCalculation = false; playData.isSurvival = false; playData.context = null;
     
     const charaStats = getCharaStats();
     gameState.score = 0; gameState.combo = 0; gameState.lives = 3; gameState.enemyHP = boss.hp; gameState.maxHP = boss.hp; gameState.maxTime = 10 * charaStats.time;
@@ -384,7 +467,7 @@ function startTypingGame() {
     } catch(e) {}
     
     playData.questions = qList.sort(() => Math.random() - 0.5); playData.qIndex = 0; playData.currentBoss = boss;
-    playData.isRevenge = false; playData.activeOaths = []; playData.isRandom = false; playData.isTyping = true; playData.isCalculation = false; playData.isSurvival = false; playData.context = null;
+    playData.isRevenge = false; playData.activeOaths = []; playData.activeReliefs = []; playData.isRandom = false; playData.isTyping = true; playData.isCalculation = false; playData.isSurvival = false; playData.context = null;
     
     const charaStats = getCharaStats();
     gameState.score = 0; gameState.combo = 0; gameState.lives = 5; gameState.enemyHP = Number(boss.hp) || 3000; gameState.maxHP = gameState.enemyHP; gameState.maxTime = 10 * charaStats.time; 
@@ -424,7 +507,7 @@ function startCalcGame() {
     const type = document.getElementById('calc-type-select')?.value; const mode = document.getElementById('calc-mode-select')?.value;
     if (!type || !mode) return alert("問題形式とモードを選択してください");
     const hand = document.querySelector('input[name="calc-hand"]:checked')?.value || 'right';
-    playData.isCalculation = true; playData.isTyping = false; playData.isSurvival = false; playData.calcType = type; playData.calcMode = mode; playData.calcQIndex = 0; playData.calcCorrect = 0; playData.calcInput = ''; playData.calcElapsed = 0; playData.calcTimeLeft = mode === '3min' ? 180 : 0; playData.calcCountTarget = mode === '100q' ? 100 : 0; playData.calcQuestions = []; playData.currentQ = null; playData.isRevenge = false; playData.activeOaths = []; playData.isRandom = false; playData.context = null; playData.handPreference = hand;
+    playData.isCalculation = true; playData.isTyping = false; playData.isSurvival = false; playData.calcType = type; playData.calcMode = mode; playData.calcQIndex = 0; playData.calcCorrect = 0; playData.calcInput = ''; playData.calcElapsed = 0; playData.calcTimeLeft = mode === '3min' ? 180 : 0; playData.calcCountTarget = mode === '100q' ? 100 : 0; playData.calcQuestions = []; playData.currentQ = null; playData.isRevenge = false; playData.activeOaths = []; playData.activeReliefs = []; playData.isRandom = false; playData.context = null; playData.handPreference = hand;
 
     gameState.score = 0; gameState.combo = 0; gameState.lives = 0; gameState.enemyHP = 0; gameState.maxHP = 1; gameState.maxTime = playData.calcTimeLeft || 1;
     isGameActive = false; isPaused = false;
