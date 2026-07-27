@@ -809,8 +809,10 @@ function buyItem(id,p) { if (!gameState.itemLevels) gameState.itemLevels = {}; i
 
 function openVersionHistory() { document.getElementById('version-overlay')?.classList.remove('hidden'); }
 function closeVersionHistory() { document.getElementById('version-overlay')?.classList.add('hidden'); }
-function openHowToPlay() { document.getElementById('howto-overlay')?.classList.remove('hidden'); }
-function closeHowToPlay() { document.getElementById('howto-overlay')?.classList.add('hidden'); }
+
+/* 修正: openHowToPlay と closeHowToPlay を GuideModule 連携に変更 */
+function openHowToPlay() { GuideModule.open(); }
+function closeHowToPlay() { GuideModule.close(); }
 
 /* ------------------------------------------
  * ガチャシステム
