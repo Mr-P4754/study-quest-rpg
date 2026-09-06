@@ -3,10 +3,10 @@
 // Ver 3.5 完全無欠・最終確定版
 // ============================================================
 
-import { gameState, rawData, saveGame, playData, rogueData } from './state.js?v=10.1.0';
-import { playSE } from './utils.js?v=10.1.0';
-import { showCutIn } from './battle-core.js?v=10.1.0';
-import { GuideModule } from './ui-manager.js?v=10.1.0';
+import { gameState, rawData, saveGame, playData, rogueData } from './state.js?v=10.1.1';
+import { playSE } from './utils.js?v=10.1.1';
+import { showCutIn } from './battle-core.js?v=10.1.1';
+import { GuideModule } from './ui-manager.js?v=10.1.1';
 
 // ------------------------------------------------------------
 // 定数・設定定義
@@ -1302,3 +1302,4 @@ if (typeof window !== 'undefined') {
         setupQaFloatingBar();
     }
 }
+

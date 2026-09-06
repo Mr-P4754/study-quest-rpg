@@ -2,7 +2,7 @@
 // js/utils.js (計算ロジック・チャート描画・音響制御)
 // ==========================================
 
-import { RARITY_ORDER, runtimeState, rogueData } from './state.js?v=10.1.0';
+import { RARITY_ORDER, runtimeState, rogueData } from './state.js?v=10.1.1';
 
 export const getRarityIndex = (r) => RARITY_ORDER.indexOf(r);
 
@@ -371,3 +371,4 @@ export function playMmlBGM() {
     };
     scheduleNote();
 }
+

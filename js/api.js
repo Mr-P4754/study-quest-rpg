@@ -2,8 +2,110 @@
 // js/api.js (GASバックエンド通信・クラウド同期)
 // ==========================================
 
-import { API_URL, rawData, gameState, dailyMissions, runtimeState, saveGame } from './state.js?v=10.1.0';
-import { isGradeMatch } from './utils.js?v=10.1.0';
+import { API_URL, rawData, gameState, dailyMissions, runtimeState, saveGame } from './state.js?v=10.1.1';
+import { isGradeMatch, ALL_GRADES } from './utils.js?v=10.1.1';
+
+// ==========================================
+// IndexedDB スマートキャッシュマネージャー
+// （マスター更新日時 updatedAt に完全連動・UI/ゲーム挙動への悪影響を完全遮断）
+// ==========================================
+const DB_NAME = 'SQ_QuestionDatabase';
+const DB_VERSION = 1;
+const STORE_NAME = 'question_cache';
+
+/**
+ * IndexedDB 接続オープンヘルパー（環境非対応やエラー時は安全に null を返却）
+ */
+function openQuestionDB() {
+    return new Promise((resolve) => {
+        if (typeof window === 'undefined' || !window.indexedDB) {
+            resolve(null);
+            return;
+        }
+        try {
+            const req = window.indexedDB.open(DB_NAME, DB_VERSION);
+            req.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME, { keyPath: 'grade' });
+                }
+            };
+            req.onsuccess = (e) => resolve(e.target.result);
+            req.onerror = () => resolve(null);
+        } catch (e) {
+            resolve(null);
+        }
+    });
+}
+
+/**
+ * 指定学年の問題キャッシュを取得
+ */
+async function getCachedGradeData(gradeCode) {
+    const db = await openQuestionDB();
+    if (!db) return null;
+    return new Promise((resolve) => {
+        try {
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const store = tx.objectStore(STORE_NAME);
+            const req = store.get(gradeCode);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => resolve(null);
+        } catch (e) {
+            resolve(null);
+        }
+    });
+}
+
+/**
+ * 指定学年の問題キャッシュを保存（現在のマスター updatedAt に紐付け）
+ */
+async function saveCachedGradeData(gradeCode, masterUpdatedAt, data) {
+    const db = await openQuestionDB();
+    if (!db || !data) return;
+    return new Promise((resolve) => {
+        try {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            store.put({
+                grade: gradeCode,
+                masterUpdatedAt: masterUpdatedAt || '',
+                data: data,
+                timestamp: Date.now()
+            });
+            tx.oncomplete = () => resolve(true);
+            tx.onerror = () => resolve(false);
+        } catch (e) {
+            resolve(false);
+        }
+    });
+}
+
+/**
+ * 全問題キャッシュの完全消去（手動クリア・再同期安全弁）
+ */
+export async function clearQuestionCache() {
+    const db = await openQuestionDB();
+    if (!db) return false;
+    return new Promise((resolve) => {
+        try {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            const req = store.clear();
+            req.onsuccess = () => {
+                console.log('[SQ-Cache] 問題キャッシュを完全消去しました。');
+                resolve(true);
+            };
+            req.onerror = () => resolve(false);
+        } catch (e) {
+            resolve(false);
+        }
+    });
+}
+
+if (typeof window !== 'undefined') {
+    window.clearQuestionCache = clearQuestionCache;
+}
 
 export async function uploadData() {
     if (typeof window.showConfirm === 'function') {
@@ -245,7 +347,10 @@ export function parseAndMergeGradeData(data, targetGrade) {
 }
 
 /**
- * 指定学年の問題データをオンデマンド非同期ロード（全角半角リトライ対応）
+ * 指定学年の問題データをオンデマンド非同期ロード
+ * 1. メモリキャッシュ（即時 0ms）
+ * 2. IndexedDBスマートキャッシュ（マスターupdatedAtと一致時: 即時 1〜5ms）
+ * 3. リモートGASフェッチ（未キャッシュまたはマスター更新時: タイムアウト制御付き）
  */
 export async function ensureGradeLoaded(gradeCode) {
     if (!gradeCode) return true;
@@ -256,18 +361,36 @@ export async function ensureGradeLoaded(gradeCode) {
     const fullG = toFullWidth(cleanGrade);
 
     if (!rawData.loadedGrades) rawData.loadedGrades = new Set();
+    // 1. メモリ内にすでに展開済みなら即座に完了（0ms）
     if (rawData.loadedGrades.has(cleanGrade) || rawData.loadedGrades.has(halfG) || rawData.loadedGrades.has(fullG)) {
         return true;
     }
 
+    // 同一学年への同時リクエストがある場合は合流
     if (gradeLoadPromises.has(cleanGrade)) {
         return gradeLoadPromises.get(cleanGrade);
     }
 
     const loadPromise = (async () => {
         try {
+            const currentMasterVersion = rawData.masterUpdatedAt || '';
+
+            // 2. IndexedDB スマートキャッシュの検証
+            // スプレッドシート側の更新日時（updatedAt）と完全に一致している場合のみ即時復元
+            if (currentMasterVersion) {
+                const cached = await getCachedGradeData(cleanGrade);
+                if (cached && cached.masterUpdatedAt === currentMasterVersion && cached.data) {
+                    parseAndMergeGradeData(cached.data, cleanGrade);
+                    rawData.loadedGrades.add(cleanGrade);
+                    rawData.loadedGrades.add(halfG);
+                    rawData.loadedGrades.add(fullG);
+                    console.log(`[SQ-Cache] 学年【${cleanGrade}】IndexedDBキャッシュから即時展開 (Master: ${currentMasterVersion}): 通常${(cached.data.questions || []).length}問 / タイピング${(cached.data.typing || []).length}問`);
+                    return true;
+                }
+            }
+
+            // 3. キャッシュなし、またはスプレッドシート更新によるキャッシュ失効時はGASから取得
             const isDebug = window.location.search.includes('debug=true');
-            // 全角・半角の候補を用意して順にリクエスト（ドライブ上のファイル名ゆれや未デプロイGASに対応）
             const candidateGrades = [...new Set([cleanGrade, fullG, halfG])];
             let data = null;
             let successGrade = cleanGrade;
@@ -277,24 +400,38 @@ export async function ensureGradeLoaded(gradeCode) {
                     ? ('http://localhost:8000/sample_api.json?grade=' + encodeURIComponent(tryGrade) + '&t=' + Date.now())
                     : (API_URL + '?grade=' + encodeURIComponent(tryGrade) + '&t=' + Date.now());
 
-                const res = await fetch(url);
-                if (res.ok) {
-                    const json = await res.json();
-                    if (json && !json.error && (Array.isArray(json.questions) || Array.isArray(json.typing))) {
-                        data = json;
-                        successGrade = tryGrade;
-                        break;
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25秒タイムアウト制御
+                    const res = await fetch(url, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    if (res.ok) {
+                        const json = await res.json();
+                        if (json && !json.error && (Array.isArray(json.questions) || Array.isArray(json.typing))) {
+                            data = json;
+                            successGrade = tryGrade;
+                            break;
+                        }
                     }
+                } catch (fetchErr) {
+                    console.warn(`[SQ-Data] 候補【${tryGrade}】の取得失敗またはタイムアウト:`, fetchErr.message);
                 }
             }
 
             if (!data) throw new Error(`学年データの取得に失敗しました (候補: ${candidateGrades.join(', ')})`);
 
+            // メモリ展開
             parseAndMergeGradeData(data, cleanGrade);
             rawData.loadedGrades.add(cleanGrade);
             rawData.loadedGrades.add(halfG);
             rawData.loadedGrades.add(fullG);
-            console.log(`[SQ-Data] 学年【${cleanGrade}】読込完了 (取得学年: ${successGrade}): 通常${(data.questions || []).length}問 / タイピング${(data.typing || []).length}問`);
+
+            // IndexedDB にキャッシュ保存（現在のマスター更新日時に紐付け）
+            if (currentMasterVersion) {
+                saveCachedGradeData(cleanGrade, currentMasterVersion, data).catch(e => console.warn('[SQ-Cache] キャッシュ保存エラー:', e));
+            }
+
+            console.log(`[SQ-Data] 学年【${cleanGrade}】リモート読込完了 (取得学年: ${successGrade}): 通常${(data.questions || []).length}問 / タイピング${(data.typing || []).length}問`);
             return true;
         } catch (e) {
             console.warn(`[SQ-Data] 学年【${cleanGrade}】読込失敗:`, e);
@@ -312,14 +449,68 @@ if (typeof window !== 'undefined') {
     window.ensureGradeLoaded = ensureGradeLoaded;
 }
 
+/**
+ * タイトル画面待機中に全学年データをバックグラウンドで先読み（アイドル時間を活用して0秒選択を実現）
+ */
+let isPrefetching = false;
+export function startIdleGradePrefetch() {
+    if (isPrefetching) return;
+    isPrefetching = true;
+
+    // まだメモリにない学年を抽出
+    const remainingGrades = ALL_GRADES.filter(g => {
+        const clean = g.toString().trim();
+        return !rawData.loadedGrades.has(clean) && !rawData.loadedGrades.has(toHalfWidth(clean)) && !rawData.loadedGrades.has(toFullWidth(clean));
+    });
+
+    if (remainingGrades.length === 0) return;
+
+    let index = 0;
+    function fetchNext() {
+        if (index >= remainingGrades.length) {
+            console.log('[SQ-Prefetch] 全学年の先行ロードが完了しました。どの学年を選択しても即座に開始できます。');
+            return;
+        }
+        const target = remainingGrades[index++];
+
+        const scheduleNext = () => {
+            if (typeof window.requestIdleCallback === 'function') {
+                window.requestIdleCallback(fetchNext, { timeout: 3000 });
+            } else {
+                setTimeout(fetchNext, 600);
+            }
+        };
+
+        // キャッシュがあれば0ミリ秒、なければ裏で静かに1つずつフェッチ
+        ensureGradeLoaded(target)
+            .catch(() => {})
+            .finally(scheduleNext);
+    }
+
+    if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(fetchNext, { timeout: 2000 });
+    } else {
+        setTimeout(fetchNext, 800);
+    }
+}
+
 export async function fetchData() {
     try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('refresh') === 'true' || params.get('clear_cache') === 'true') {
+            console.log('[SQ-Cache] URLパラメータ指定による問題キャッシュクリアを実行');
+            await clearQuestionCache();
+        }
+
         const isDebug = window.location.search.includes('debug=true');
         // 初回起動時は共通マスター（キャラ・ボス・ショップ等）のみを高速取得
         const url = isDebug ? ('http://localhost:8000/sample_api.json?action=master&t=' + Date.now()) : (API_URL + '?action=master&t=' + Date.now());
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP通信エラー: ${res.status}`);
         const data = await res.json();
+
+        // マスターの更新日時・バージョンを保存（IndexedDBキャッシュの有効性判定に使用）
+        rawData.masterUpdatedAt = String(data.updatedAt || data.version || '');
 
         const convertDriveUrl = (url) => {
             if (!url || typeof url !== 'string' || !url.startsWith('http')) return url || '';
@@ -497,7 +688,15 @@ export async function fetchData() {
 
         // 初期学年のバックグラウンド先行ロード（前回学年、ConfigのactiveGrade、または小4）
         const defaultGrade = (rawData.config && rawData.config.activeGrade) || (gameState && gameState.lastGrade) || '小4';
-        ensureGradeLoaded(defaultGrade).catch(err => console.warn('[SQ-Data] 初期学年先読みエラー:', err));
+        ensureGradeLoaded(defaultGrade)
+            .then(() => {
+                // 初期学年ロード完了後、残りの全学年をバックグラウンドで先読み開始
+                startIdleGradePrefetch();
+            })
+            .catch(err => {
+                console.warn('[SQ-Data] 初期学年先読みエラー:', err);
+                startIdleGradePrefetch();
+            });
 
         console.log(`[SQ-Data] マスター読込完了: キャラ${rawData.characters.length}体 / ボス${rawData.bosses.length}体 (更新: ${data.updatedAt || 'N/A'})`);
     } catch(e) {
@@ -543,3 +742,4 @@ function generateStringHash(str) {
     for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash) + str.charCodeAt(i) | 0;
     return hash;
 }
+

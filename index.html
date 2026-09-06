@@ -9,12 +9,12 @@
     <title>STUDY QUEST RPG</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✏️</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/base.css?v=10.1.0">
-    <link rel="stylesheet" href="css/layout.css?v=10.1.0">
-    <link rel="stylesheet" href="css/components.css?v=10.1.0">
-    <link rel="stylesheet" href="css/quests.css?v=10.1.0">
-    <link rel="stylesheet" href="css/special-quest.css?v=10.1.0">
-    <link rel="stylesheet" href="css/studyel.css?v=10.1.0">
+    <link rel="stylesheet" href="css/base.css?v=10.1.1">
+    <link rel="stylesheet" href="css/layout.css?v=10.1.1">
+    <link rel="stylesheet" href="css/components.css?v=10.1.1">
+    <link rel="stylesheet" href="css/quests.css?v=10.1.1">
+    <link rel="stylesheet" href="css/special-quest.css?v=10.1.1">
+    <link rel="stylesheet" href="css/studyel.css?v=10.1.1">
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
 <body>
@@ -32,7 +32,7 @@
         <div id="campaign-text" class="campaign-text"></div>
     </div>
     <div class="title-logo">STUDY QUEST</div>
-    <div class="version-text" onclick="openVersionHistory()">Ver 10.1.0</div>
+    <div class="version-text" onclick="openVersionHistory()">Ver 10.1.1</div>
     
     <div id="title-news-banner" class="title-news-banner hidden" onclick="openCategory('special')">
         <span id="title-news-badge" class="title-news-badge">NEW!</span>
@@ -856,6 +856,17 @@
     <div class="modal modal-w500">
         <h2 class="text-blue mt-0">📋 更新履歴</h2>
         <div class="version-list version-list-box">
+            <h4>Ver 10.1.1（高速化アップデート：学年問題IndexedDBスマートキャッシュ・アイドル先読み）</h4>
+            <ul>
+                <li>⚡ <b>学年別問題のIndexedDBスマートキャッシュ導入</b>:
+                    <ul>
+                        <li><b>初回・学年選択の超高速化</b>: 一度読み込んだ学年の問題・タイピングデータを端末ローカル（IndexedDB）に安全にキャッシュ。学年選択時の待ち時間を「0秒（即時表示）」に大幅短縮。</li>
+                        <li><b>マスター更新日時連動の自動同期</b>: スプレッドシート側でマスターデータが更新された場合は自動的に古いキャッシュを破棄して最新データを再取得。キャッシュが残り続けてUIや挙動に悪影響が出る心配はありません。</li>
+                        <li><b>アイドル先行ロード</b>: タイトル画面待機中のアイドル時間を利用してバックグラウンドで全学年データを静かに先読み。どの学年を選択しても待ち時間なしでプレイ可能に。</li>
+                        <li><b>通信多重化の解消＆タイムアウト保護</b>: 表記ゆれ候補の直列リクエストによる遅延を防止し、25秒タイムアウト制御を導入。</li>
+                    </ul>
+                </li>
+            </ul>
             <h4>Ver 10.1.0（大型アップデート：妖精「スタディエル」育成機能正式リリース）</h4>
             <ul>
                 <li>🧚 <b>新機能「スタディエル育成システム（Ver 3.5）」正式リリース！</b>
@@ -930,7 +941,8 @@
                 <li>その他、軽微なバグ修正と安定性の向上</li>
             </ul>
         </div>
-        <button class="menu-btn mt-15 btn-gray" onclick="closeVersionHistory()">閉じる</button>
+        <button class="menu-btn mt-15 btn-blue" onclick="manualReloadCache()">🔄 問題キャッシュを再取得（強制同期）</button>
+        <button class="menu-btn mt-10 btn-gray" onclick="closeVersionHistory()">閉じる</button>
     </div>
 </div>
 
@@ -1076,6 +1088,7 @@
     </div>
 </div>
 
-<script type="module" src="js/main.js?v=10.1.0"></script>
+<script type="module" src="js/main.js?v=10.1.1"></script>
 </body>
 </html>
+

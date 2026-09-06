@@ -698,3 +698,4 @@ export function saveGame() {
     localStorage.setItem('sq_item_inventory', JSON.stringify(gameState.inventory));
     localStorage.setItem('sq_studyel', JSON.stringify(gameState.studyel));
 }
+

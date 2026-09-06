@@ -9,7 +9,7 @@ import {
     runtimeState,
     GUIDE_DATA,
     saveGame
-} from './state.js?v=10.1.0';
+} from './state.js?v=10.1.1';
 
 import {
     getDisplayName,
@@ -17,7 +17,7 @@ import {
     playSE,
     ALL_GRADES,
     isGradeMatch
-} from './utils.js?v=10.1.0';
+} from './utils.js?v=10.1.1';
 
 const SUBJECT_ORDER = [
     '国語', '算数', '数学', '理科', '社会', '英語', '情報',
@@ -93,11 +93,20 @@ export async function filterSubjects() {
     if(uSelect) uSelect.innerHTML = '<option value="">単元を選択</option>';
     if(!gVal) return;
 
-    // 学年別問題データのオンデマンド取得を保証
-    if (typeof window.ensureGradeLoaded === 'function') {
+    // 学年別問題データのオンデマンド取得
+    const isLoaded = rawData.loadedGrades && (
+        rawData.loadedGrades.has(gVal) ||
+        rawData.loadedGrades.has(gVal.replace(/[！-～]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)))
+    );
+
+    if (!isLoaded && typeof window.ensureGradeLoaded === 'function') {
         sSelect.innerHTML = '<option value="">読込中...</option>';
-        await window.ensureGradeLoaded(gVal);
+        const loadOk = await window.ensureGradeLoaded(gVal);
         sSelect.innerHTML = '<option value="">教科を選択</option>';
+        if (!loadOk) {
+            sSelect.innerHTML = '<option value="">（読込失敗・再選択）</option>';
+            return;
+        }
     }
     
     // isGradeMatch で表記ゆれを吸収して抽出
@@ -118,6 +127,25 @@ export async function filterSubjects() {
 
     subjects.forEach(s => sSelect.innerHTML += `<option value="${s}">${s}</option>`);
     sSelect.value = ""; // デフォルトは「教科を選択」
+}
+
+/**
+ * 手動キャッシュクリア＆最新再同期（セーブデータには一切影響を与えない安全設計）
+ */
+export async function manualReloadCache() {
+    if (typeof window.showConfirm === 'function') {
+        const ok = await window.showConfirm("問題データのローカルキャッシュをクリアして再取得しますか？\n（キャラクターや所持アイテムなどのセーブデータには一切影響しません）");
+        if (!ok) return;
+    }
+    if (typeof window.clearQuestionCache === 'function') {
+        await window.clearQuestionCache();
+    }
+    alert("問題キャッシュをクリアしました。ページを再読み込みします。");
+    location.reload();
+}
+
+if (typeof window !== 'undefined') {
+    window.manualReloadCache = manualReloadCache;
 }
 
 export function filterUnits() {
@@ -889,3 +917,4 @@ export const GuideModule = {
         `;
     }
 };
+

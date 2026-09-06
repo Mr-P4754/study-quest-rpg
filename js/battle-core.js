@@ -11,7 +11,7 @@ import {
     runtimeState,
     LV_BONUS_RATE,
     saveGame
-} from './state.js?v=10.1.0';
+} from './state.js?v=10.1.1';
 
 import {
     getDisplayName,
@@ -20,12 +20,12 @@ import {
     playBGM,
     stopBGM,
     isGradeMatch
-} from './utils.js?v=10.1.0';
+} from './utils.js?v=10.1.1';
 
 import {
     updateMissionProgress,
     checkTitles
-} from './gacha-shop.js?v=10.1.0';
+} from './gacha-shop.js?v=10.1.1';
 
 import {
     showAppModal,
@@ -33,7 +33,7 @@ import {
     showConfirm,
     updateTitleInfo,
     addCalcRecord
-} from './ui-manager.js?v=10.1.0';
+} from './ui-manager.js?v=10.1.1';
 
 export function showCutIn(t) { 
     const str = String(t);
@@ -702,3 +702,4 @@ export function backToTitle() {
     if (typeof window.updateMissionBadge === 'function') window.updateMissionBadge(); 
     if (typeof checkTitles === 'function') checkTitles();
 }
+
