@@ -9,7 +9,7 @@ import {
     runtimeState,
     GUIDE_DATA,
     saveGame
-} from './state.js?v=10.1.1';
+} from './state.js?v=10.1.2';
 
 import {
     getDisplayName,
@@ -17,7 +17,7 @@ import {
     playSE,
     ALL_GRADES,
     isGradeMatch
-} from './utils.js?v=10.1.1';
+} from './utils.js?v=10.1.2';
 
 const SUBJECT_ORDER = [
     '国語', '算数', '数学', '理科', '社会', '英語', '情報',
@@ -130,22 +130,90 @@ export async function filterSubjects() {
 }
 
 /**
- * 手動キャッシュクリア＆最新再同期（セーブデータには一切影響を与えない安全設計）
+ * 現在のキャッシュ取得状況をバージョンモーダル内に描画
+ */
+export async function renderQuestionCacheStatus() {
+    const container = document.getElementById('cache-status-container');
+    if (!container) return;
+
+    if (typeof window.getQuestionCacheStatus !== 'function') {
+        container.innerHTML = '<div class="text-xs text-gray">キャッシュ情報を取得できません。</div>';
+        return;
+    }
+
+    container.innerHTML = '<div class="text-xs text-gray">キャッシュ状態を確認中...</div>';
+    const list = await window.getQuestionCacheStatus();
+
+    if (!list || list.length === 0) {
+        container.innerHTML = `
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px; margin-top: 10px; text-align: left;">
+                <div style="font-weight: bold; font-size: 11px; color: #64748b; margin-bottom: 4px;">📦 問題キャッシュ（IndexedDB）状態</div>
+                <div style="font-size: 11px; color: #e11d48;">⚠️ キャッシュ未保存（学年選択時に自動取得されます）</div>
+            </div>
+        `;
+        return;
+    }
+
+    const rows = list.map(item => {
+        const timeStr = item.updatedAt || '日時未記録';
+        return `<div style="display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px dashed #e2e8f0;">
+            <span style="font-weight: 600; color: #1e293b;">【${item.grade}】</span>
+            <span style="color: #0284c7;">通常 ${item.questionCount || 0}問 / タイピング ${item.typingCount || 0}問</span>
+            <span style="color: #64748b; font-size: 10px;">(${timeStr})</span>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = `
+        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; margin-top: 10px; text-align: left; font-size: 11px;">
+            <div style="font-weight: bold; color: #334155; margin-bottom: 6px; display: flex; justify-content: space-between;">
+                <span>📦 保存済み問題キャッシュ一覧</span>
+                <span style="color: #10b981; font-weight: normal;">✅ ${list.length}学年 保存済み</span>
+            </div>
+            <div style="max-height: 120px; overflow-y: auto;">
+                ${rows}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * 手動キャッシュクリア＆最新再同期（リアルタイム即時同期・リロード不要）
  */
 export async function manualReloadCache() {
+    const currentGrade = document.getElementById('grade-select')?.value || '小4';
+    
     if (typeof window.showConfirm === 'function') {
-        const ok = await window.showConfirm("問題データのローカルキャッシュをクリアして再取得しますか？\n（キャラクターや所持アイテムなどのセーブデータには一切影響しません）");
+        const ok = await window.showConfirm(`【${currentGrade}】の最新問題データをサーバーから今すぐ強制取得しますか？\n\n・リモートビルドされた最新のGoogleドライブJSONを直結取得\n・IndexedDBキャッシュを最新に即時上書き\n・画面の教科一覧もその場で最新化されます\n（※キャラクターやセーブデータには一切影響しません）`);
         if (!ok) return;
     }
-    if (typeof window.clearQuestionCache === 'function') {
-        await window.clearQuestionCache();
+
+    const btn = document.getElementById('btn-manual-sync');
+    const originalText = btn ? btn.innerText : '🔄 問題キャッシュを再取得（強制同期）';
+    if (btn) { btn.innerText = '⏳ サーバーから最新問題を取得中...'; btn.disabled = true; }
+
+    try {
+        if (typeof window.forceSyncGradeQuestions === 'function') {
+            const res = await window.forceSyncGradeQuestions(currentGrade);
+            await renderQuestionCacheStatus();
+            alert(`🎉 【${res.grade}】の最新問題を同期しました！\n\n・通常問題: ${res.questionCount}問\n・タイピング: ${res.typingCount}問\n・更新日時: ${res.updatedAt}\n\nゲームに即座に反映されました！`);
+        } else {
+            // フォールバック: キャッシュクリア
+            if (typeof window.clearQuestionCache === 'function') {
+                await window.clearQuestionCache();
+            }
+            alert("問題キャッシュをクリアしました。ページを再読み込みします。");
+            location.href = window.location.pathname + '?refresh=true&t=' + Date.now();
+        }
+    } catch (e) {
+        alert("同期エラー: " + (e.message || e));
+    } finally {
+        if (btn) { btn.innerText = originalText; btn.disabled = false; }
     }
-    alert("問題キャッシュをクリアしました。ページを再読み込みします。");
-    location.reload();
 }
 
 if (typeof window !== 'undefined') {
     window.manualReloadCache = manualReloadCache;
+    window.renderQuestionCacheStatus = renderQuestionCacheStatus;
 }
 
 export function filterUnits() {
@@ -537,6 +605,7 @@ export function closeSyncMenu() {
 export function openVersionHistory() { 
     closeAllCategoryModals();
     document.getElementById('version-overlay')?.classList.remove('hidden'); 
+    renderQuestionCacheStatus();
 }
 export function closeVersionHistory() { 
     document.getElementById('version-overlay')?.classList.add('hidden'); 

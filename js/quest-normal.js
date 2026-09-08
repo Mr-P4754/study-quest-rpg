@@ -9,7 +9,7 @@ import {
     rogueData,
     runtimeState,
     saveGame
-} from './state.js?v=10.1.1';
+} from './state.js?v=10.1.2';
 
 import {
     getGradeMultiplier,
@@ -18,7 +18,7 @@ import {
     playBGM,
     stopBGM,
     isGradeMatch
-} from './utils.js?v=10.1.1';
+} from './utils.js?v=10.1.2';
 
 import {
     showCutIn,
@@ -27,12 +27,12 @@ import {
     startTimer,
     getCharaStats,
     finishGame
-} from './battle-core.js?v=10.1.1';
+} from './battle-core.js?v=10.1.2';
 
 import {
     updateMissionProgress,
     checkTitles
-} from './gacha-shop.js?v=10.1.1';
+} from './gacha-shop.js?v=10.1.2';
 
 import {
     showAppModal,
@@ -41,7 +41,7 @@ import {
     updateTitleInfo,
     openOathMenu,
     openReliefMenu
-} from './ui-manager.js?v=10.1.1';
+} from './ui-manager.js?v=10.1.2';
 
 // ==========================================
 // 通常クエスト

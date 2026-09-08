@@ -2,8 +2,8 @@
 // js/api.js (GASバックエンド通信・クラウド同期)
 // ==========================================
 
-import { API_URL, rawData, gameState, dailyMissions, runtimeState, saveGame } from './state.js?v=10.1.1';
-import { isGradeMatch, ALL_GRADES } from './utils.js?v=10.1.1';
+import { API_URL, rawData, gameState, dailyMissions, runtimeState, saveGame } from './state.js?v=10.1.2';
+import { isGradeMatch, ALL_GRADES } from './utils.js?v=10.1.2';
 
 // ==========================================
 // IndexedDB スマートキャッシュマネージャー
@@ -105,8 +105,91 @@ export async function clearQuestionCache() {
     });
 }
 
+/**
+ * IndexedDB内の全学年キャッシュ状況を取得（可視化用）
+ */
+export async function getQuestionCacheStatus() {
+    const db = await openQuestionDB();
+    if (!db) return [];
+    return new Promise((resolve) => {
+        try {
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const store = tx.objectStore(STORE_NAME);
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror = () => resolve([]);
+        } catch (e) {
+            resolve([]);
+        }
+    });
+}
+
+/**
+ * 指定学年の問題をサーバーから即時強制同期（キャッシュバスター直結・リロード不要）
+ */
+export async function forceSyncGradeQuestions(gradeCode) {
+    if (!gradeCode) throw new Error('学年が指定されていません。');
+    const cleanGrade = gradeCode.toString().trim();
+    console.log(`[SQ-ForceSync] 学年【${cleanGrade}】の即時強制同期を開始...`);
+
+    const serverData = await fetchGradeFromServer(cleanGrade);
+    if (!serverData) {
+        throw new Error(`学年【${cleanGrade}】のデータをサーバーから取得できませんでした。ネット接続またはサーバー状態を確認してください。`);
+    }
+
+    // 1. IndexedDB キャッシュを最新データで上書き保存
+    await saveCachedGradeData(cleanGrade, serverData);
+
+    // 2. メモリ内の問題データも最新データでクリーンに置き換え
+    parseAndMergeGradeData(serverData, cleanGrade);
+
+    const qCount = Array.isArray(serverData.questions) ? serverData.questions.length : 0;
+    const tCount = Array.isArray(serverData.typing) ? serverData.typing.length : 0;
+    const updatedAt = String(serverData.updatedAt || serverData.version || '不明');
+
+    console.log(`[SQ-ForceSync] 学年【${cleanGrade}】の強制同期完了: 通常${qCount}問 / タイピング${tCount}問 (更新: ${updatedAt})`);
+
+    // 3. 画面の教科一覧を即座に再描画
+    if (typeof window !== 'undefined' && typeof window.filterSubjects === 'function') {
+        window.filterSubjects();
+    }
+
+    return {
+        success: true,
+        grade: cleanGrade,
+        questionCount: qCount,
+        typingCount: tCount,
+        updatedAt: updatedAt
+    };
+}
+
+/**
+ * 全学年の一括即時強制同期
+ */
+export async function forceSyncAllGrades(onProgress) {
+    console.log('[SQ-ForceSync] 全学年の一括強制同期を開始...');
+    const results = [];
+    for (let i = 0; i < ALL_GRADES.length; i++) {
+        const g = ALL_GRADES[i];
+        if (typeof onProgress === 'function') {
+            onProgress(g, i + 1, ALL_GRADES.length);
+        }
+        try {
+            const res = await forceSyncGradeQuestions(g);
+            results.push(res);
+        } catch (err) {
+            console.warn(`[SQ-ForceSync] 学年【${g}】の同期失敗:`, err);
+            results.push({ success: false, grade: g, error: err.message });
+        }
+    }
+    return results;
+}
+
 if (typeof window !== 'undefined') {
     window.clearQuestionCache = clearQuestionCache;
+    window.getQuestionCacheStatus = getQuestionCacheStatus;
+    window.forceSyncGradeQuestions = forceSyncGradeQuestions;
+    window.forceSyncAllGrades = forceSyncAllGrades;
 }
 
 export async function uploadData() {
