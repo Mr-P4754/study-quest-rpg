@@ -9,12 +9,12 @@
     <title>STUDY QUEST RPG</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✏️</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/base.css?v=10.1.2">
-    <link rel="stylesheet" href="css/layout.css?v=10.1.2">
-    <link rel="stylesheet" href="css/components.css?v=10.1.2">
-    <link rel="stylesheet" href="css/quests.css?v=10.1.2">
-    <link rel="stylesheet" href="css/special-quest.css?v=10.1.2">
-    <link rel="stylesheet" href="css/studyel.css?v=10.1.2">
+    <link rel="stylesheet" href="css/base.css?v=10.1.3">
+    <link rel="stylesheet" href="css/layout.css?v=10.1.3">
+    <link rel="stylesheet" href="css/components.css?v=10.1.3">
+    <link rel="stylesheet" href="css/quests.css?v=10.1.3">
+    <link rel="stylesheet" href="css/special-quest.css?v=10.1.3">
+    <link rel="stylesheet" href="css/studyel.css?v=10.1.3">
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script>
         window.addEventListener('error', function(e) {
@@ -44,7 +44,7 @@
         <div id="campaign-text" class="campaign-text"></div>
     </div>
     <div class="title-logo">STUDY QUEST</div>
-    <div class="version-text" onclick="openVersionHistory()">Ver 10.1.2</div>
+    <div class="version-text" onclick="openVersionHistory()">Ver 10.1.3</div>
     
     <div id="title-news-banner" class="title-news-banner hidden" onclick="openCategory('special')">
         <span id="title-news-badge" class="title-news-badge">NEW!</span>
@@ -378,7 +378,10 @@
         </div>
         <p class="text-sm text-gray">挑戦する単元を選んでください</p>
         <div class="cat-box-gray">
-            <select id="grade-select" aria-label="学年を選択" class="select-box cat-select-full" onchange="filterSubjects()"><option value="">学年を選択</option></select>
+            <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 8px;">
+                <select id="grade-select" aria-label="学年を選択" class="select-box cat-select-full" style="margin-bottom: 0;" onchange="filterSubjects()"><option value="">学年を選択</option></select>
+                <button type="button" class="menu-btn btn-blue" style="width: 44px; height: 38px; min-width: 44px; padding: 0; font-size: 16px; border-radius: 6px; display: flex; align-items: center; justify-content: center;" title="選択中の学年の最新問題をサーバーから強制同期" onclick="manualReloadCache(document.getElementById('grade-select')?.value)">🔄</button>
+            </div>
             <select id="subject-select" aria-label="教科を選択" class="select-box cat-select-full" onchange="filterUnits()"><option value="">教科を選択</option></select>
             <select id="unit-select" aria-label="単元を選択" class="select-box cat-select-full"><option value="">単元を選択</option></select>
             <select id="boss-hp-select" aria-label="ボスHPを選択" class="select-box cat-select-full">
@@ -868,7 +871,13 @@
     <div class="modal modal-w500">
         <h2 class="text-blue mt-0">📋 更新履歴</h2>
         <div class="version-list version-list-box">
-            <h4>Ver 10.1.2（最新安定版・即時強制同期・キャッシュ可視化）</h4>
+            <h4>Ver 10.1.3（最新安定版：全学年一括強制同期＆全角半角最新自動判定）</h4>
+            <ul>
+                <li>🚀 <b>全学年の一括強制同期（小1〜高3）</b>: バージョン情報画面に「全学年を一括強制同期」ボタンを新設。ワンクリックで全12学年の最新問題を即時取得・キャッシュ保存。</li>
+                <li>🎯 <b>全角・半角ハイブリッド最新自動判定</b>: 中1（全角「中１」1,450問／半角「中1」190問）のような複数ファイルが存在する場合に、更新日時が最も新しい最適データを自動判定してロードする安全エンジンを実装。</li>
+                <li>🔄 <b>クエスト出発画面での即時同期</b>: 学年選択セレクトボックスの横に「🔄」ボタンを配置し、選択中の学年の問題をその場でワンタップ最新化可能に。</li>
+            </ul>
+            <h4>Ver 10.1.2（即時強制同期・キャッシュ可視化）</h4>
             <ul>
                 <li>⚡ <b>問題キャッシュの即時強制同期</b>: リモートビルド後の最新問題をリロード不要で即座に直結取得・反映。</li>
                 <li>📦 <b>キャッシュ状態の可視化</b>: IndexedDBに保存されている学年別の問題数・タイピング数・更新日時を一覧表示。</li>
@@ -960,7 +969,19 @@
             </ul>
         </div>
         <div id="cache-status-container"></div>
-        <button id="btn-manual-sync" class="menu-btn mt-15 btn-blue" onclick="manualReloadCache()">🔄 問題キャッシュを再取得（強制同期）</button>
+        <div class="mt-15" style="display: flex; flex-direction: column; gap: 8px;">
+            <button id="btn-sync-all-grades" class="menu-btn btn-gold" style="font-weight: bold; font-size: 15px; padding: 12px;" onclick="syncAllGradesNow()">
+                🚀 全学年を一括強制同期（小1〜高3）
+            </button>
+            <div style="display: flex; gap: 8px;">
+                <button id="btn-manual-sync" class="menu-btn btn-blue" style="flex: 1; font-size: 13px;" onclick="manualReloadCache()">
+                    🔄 選択学年のみ強制同期
+                </button>
+                <button class="menu-btn btn-gray" style="width: 120px; font-size: 12px;" onclick="clearAllCacheConfirm()">
+                    🗑️ キャッシュ消去
+                </button>
+            </div>
+        </div>
         <button class="menu-btn mt-10 btn-gray" onclick="closeVersionHistory()">閉じる</button>
     </div>
 </div>
@@ -1107,7 +1128,7 @@
     </div>
 </div>
 
-<script type="module" src="js/main.js?v=10.1.2"></script>
+<script type="module" src="js/main.js?v=10.1.3"></script>
 </body>
 </html>
 

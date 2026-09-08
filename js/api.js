@@ -39,18 +39,62 @@ function openQuestionDB() {
 }
 
 /**
- * 指定学年の問題キャッシュを取得
+ * 日時文字列のタイムスタンプ化ヘルパー
+ */
+function parseDateTime(timeStr) {
+    if (!timeStr) return 0;
+    try {
+        const s = timeStr.toString().trim().replace(/\//g, '-');
+        const t = Date.parse(s);
+        return isNaN(t) ? 0 : t;
+    } catch {
+        return 0;
+    }
+}
+
+/**
+ * 指定学年の問題キャッシュを取得（全角・半角の両キーを走査し最新・最多のものを返却）
  */
 async function getCachedGradeData(gradeCode) {
     const db = await openQuestionDB();
     if (!db) return null;
+    const clean = gradeCode ? gradeCode.toString().trim() : '';
+    const halfG = toHalfWidth(clean);
+    const fullG = toFullWidth(clean);
+    const keys = [...new Set([clean, halfG, fullG].filter(Boolean))];
+
     return new Promise((resolve) => {
         try {
             const tx = db.transaction(STORE_NAME, 'readonly');
             const store = tx.objectStore(STORE_NAME);
-            const req = store.get(gradeCode);
-            req.onsuccess = () => resolve(req.result || null);
-            req.onerror = () => resolve(null);
+            const candidates = [];
+            let pending = keys.length;
+
+            keys.forEach(k => {
+                const req = store.get(k);
+                req.onsuccess = () => {
+                    if (req.result && req.result.data) candidates.push(req.result);
+                    pending--;
+                    if (pending === 0) finish();
+                };
+                req.onerror = () => {
+                    pending--;
+                    if (pending === 0) finish();
+                };
+            });
+
+            function finish() {
+                if (candidates.length === 0) return resolve(null);
+                candidates.sort((a, b) => {
+                    const timeA = parseDateTime(a.updatedAt);
+                    const timeB = parseDateTime(b.updatedAt);
+                    if (timeA !== timeB) return timeB - timeA;
+                    const countA = (a.questionCount || 0) + (a.typingCount || 0);
+                    const countB = (b.questionCount || 0) + (b.typingCount || 0);
+                    return countB - countA;
+                });
+                resolve(candidates[0]);
+            }
         } catch (e) {
             resolve(null);
         }
@@ -58,22 +102,33 @@ async function getCachedGradeData(gradeCode) {
 }
 
 /**
- * 指定学年の問題キャッシュを保存（更新日時・問題数を直接記録して独立検知）
+ * 指定学年の問題キャッシュを保存（全角・半角の両キーで保存し即座にヒットするようにする）
  */
 async function saveCachedGradeData(gradeCode, data) {
     const db = await openQuestionDB();
     if (!db || !data) return;
+    const clean = gradeCode ? gradeCode.toString().trim() : '';
+    const halfG = toHalfWidth(clean);
+    const fullG = toFullWidth(clean);
+    const keys = [...new Set([clean, halfG, fullG].filter(Boolean))];
+
     return new Promise((resolve) => {
         try {
             const tx = db.transaction(STORE_NAME, 'readwrite');
             const store = tx.objectStore(STORE_NAME);
-            store.put({
-                grade: gradeCode,
-                updatedAt: String(data.updatedAt || data.version || ''),
-                questionCount: Array.isArray(data.questions) ? data.questions.length : 0,
-                typingCount: Array.isArray(data.typing) ? data.typing.length : 0,
-                data: data,
-                timestamp: Date.now()
+            const updatedAt = String(data.updatedAt || data.version || '');
+            const questionCount = Array.isArray(data.questions) ? data.questions.length : 0;
+            const typingCount = Array.isArray(data.typing) ? data.typing.length : 0;
+
+            keys.forEach(k => {
+                store.put({
+                    grade: k,
+                    updatedAt: updatedAt,
+                    questionCount: questionCount,
+                    typingCount: typingCount,
+                    data: data,
+                    timestamp: Date.now()
+                });
             });
             tx.oncomplete = () => resolve(true);
             tx.onerror = () => resolve(false);
@@ -432,15 +487,16 @@ export function parseAndMergeGradeData(data, targetGrade) {
 }
 
 /**
- * サーバーから指定学年の最新データを取得（タイムアウト制御付き）
+ * サーバーから指定学年の最新データを取得（タイムアウト制御付き・全角半角候補から最新データを自動選択）
  */
 async function fetchGradeFromServer(cleanGrade) {
     const halfG = toHalfWidth(cleanGrade);
     const fullG = toFullWidth(cleanGrade);
-    const candidateGrades = [...new Set([cleanGrade, fullG, halfG])];
+    const candidateGrades = [...new Set([cleanGrade, fullG, halfG].filter(Boolean))];
     const isDebug = window.location.search.includes('debug=true');
 
-    for (const tryGrade of candidateGrades) {
+    // 全候補（半角・全角）を並列フェッチ
+    const fetchPromises = candidateGrades.map(async (tryGrade) => {
         const url = isDebug
             ? ('http://localhost:8000/sample_api.json?grade=' + encodeURIComponent(tryGrade) + '&t=' + Date.now())
             : (API_URL + '?grade=' + encodeURIComponent(tryGrade) + '&t=' + Date.now());
@@ -453,14 +509,39 @@ async function fetchGradeFromServer(cleanGrade) {
             if (res.ok) {
                 const json = await res.json();
                 if (json && !json.error && (Array.isArray(json.questions) || Array.isArray(json.typing))) {
-                    return json;
+                    return { tryGrade, data: json };
                 }
             }
         } catch (fetchErr) {
             console.warn(`[SQ-Data] 候補【${tryGrade}】の取得失敗またはタイムアウト:`, fetchErr.message);
         }
+        return null;
+    });
+
+    const results = await Promise.allSettled(fetchPromises);
+    const validDataList = [];
+    for (const r of results) {
+        if (r.status === 'fulfilled' && r.value && r.value.data) {
+            validDataList.push(r.value);
+        }
     }
-    return null;
+
+    if (validDataList.length === 0) return null;
+    if (validDataList.length === 1) return validDataList[0].data;
+
+    // 複数候補がある場合、1. 更新日時が最新 2. 通常問題＋タイピング数が多いものを最良データとして採用
+    validDataList.sort((a, b) => {
+        const timeA = parseDateTime(a.data.updatedAt || a.data.version);
+        const timeB = parseDateTime(b.data.updatedAt || b.data.version);
+        if (timeA !== timeB) return timeB - timeA;
+        const countA = (Array.isArray(a.data.questions) ? a.data.questions.length : 0) + (Array.isArray(a.data.typing) ? a.data.typing.length : 0);
+        const countB = (Array.isArray(b.data.questions) ? b.data.questions.length : 0) + (Array.isArray(b.data.typing) ? b.data.typing.length : 0);
+        return countB - countA;
+    });
+
+    const best = validDataList[0];
+    console.log(`[SQ-Data] 候補【${candidateGrades.join(', ')}】から最良データ採用: ${best.tryGrade} (更新: ${best.data.updatedAt || 'N/A'}, 問題数: ${best.data.questions?.length || 0})`);
+    return best.data;
 }
 
 // 進行中のバックグラウンド同期管理

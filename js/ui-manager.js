@@ -132,6 +132,9 @@ export async function filterSubjects() {
 /**
  * 現在のキャッシュ取得状況をバージョンモーダル内に描画
  */
+/**
+ * 現在のキャッシュ取得状況をバージョンモーダル内に描画
+ */
 export async function renderQuestionCacheStatus() {
     const container = document.getElementById('cache-status-container');
     if (!container) return;
@@ -141,35 +144,68 @@ export async function renderQuestionCacheStatus() {
         return;
     }
 
-    container.innerHTML = '<div class="text-xs text-gray">キャッシュ状態を確認中...</div>';
+    container.innerHTML = '<div class="text-xs text-gray" style="padding: 6px 0;">⏳ キャッシュ状態を確認中...</div>';
     const list = await window.getQuestionCacheStatus();
 
     if (!list || list.length === 0) {
         container.innerHTML = `
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px; margin-top: 10px; text-align: left;">
-                <div style="font-weight: bold; font-size: 11px; color: #64748b; margin-bottom: 4px;">📦 問題キャッシュ（IndexedDB）状態</div>
-                <div style="font-size: 11px; color: #e11d48;">⚠️ キャッシュ未保存（学年選択時に自動取得されます）</div>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-top: 12px; text-align: left;">
+                <div style="font-weight: bold; font-size: 12px; color: #64748b; margin-bottom: 4px;">📦 問題キャッシュ（IndexedDB）状態</div>
+                <div style="font-size: 11px; color: #f59e0b;">⚠️ キャッシュ未保存（「全学年を一括強制同期」を押すと全問即時保存されます）</div>
             </div>
         `;
         return;
     }
 
-    const rows = list.map(item => {
-        const timeStr = item.updatedAt || '日時未記録';
-        return `<div style="display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px dashed #e2e8f0;">
-            <span style="font-weight: 600; color: #1e293b;">【${item.grade}】</span>
-            <span style="color: #0284c7;">通常 ${item.questionCount || 0}問 / タイピング ${item.typingCount || 0}問</span>
-            <span style="color: #64748b; font-size: 10px;">(${timeStr})</span>
+    // 重複キー（全角・半角）をマージして学年順にソート
+    const gradeOrder = ['小1', '小2', '小3', '小4', '小5', '小6', '中1', '中2', '中3', '高1', '高2', '高3'];
+    const mergedMap = new Map();
+
+    list.forEach(item => {
+        const halfG = (item.grade || '').toString().trim().replace(/[！-～]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+        if (!mergedMap.has(halfG)) {
+            mergedMap.set(halfG, item);
+        } else {
+            const existing = mergedMap.get(halfG);
+            const countEx = (existing.questionCount || 0) + (existing.typingCount || 0);
+            const countCur = (item.questionCount || 0) + (item.typingCount || 0);
+            if (countCur > countEx) {
+                mergedMap.set(halfG, item);
+            }
+        }
+    });
+
+    const sortedItems = Array.from(mergedMap.values()).sort((a, b) => {
+        const hA = (a.grade || '').toString().trim().replace(/[！-～]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+        const hB = (b.grade || '').toString().trim().replace(/[！-～]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+        const idxA = gradeOrder.indexOf(hA);
+        const idxB = gradeOrder.indexOf(hB);
+        return (idxA >= 0 ? idxA : 99) - (idxB >= 0 ? idxB : 99);
+    });
+
+    let totalQ = 0;
+    let totalT = 0;
+    const rows = sortedItems.map(item => {
+        const qCount = item.questionCount || 0;
+        const tCount = item.typingCount || 0;
+        totalQ += qCount;
+        totalT += tCount;
+        const timeStr = item.updatedAt ? item.updatedAt.slice(5) : '日時未記録';
+        const displayGrade = item.grade.toString().trim().replace(/[！-～]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+        return `<div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px dashed #e2e8f0; font-size: 11px;">
+            <span style="font-weight: bold; color: #1e293b; min-width: 45px;">【${displayGrade}】</span>
+            <span style="color: #0284c7; flex: 1; text-align: left; padding-left: 8px;">通常 <b>${qCount}</b>問 / ⌨️ <b>${tCount}</b>問</span>
+            <span style="color: #64748b; font-size: 10px;">${timeStr}</span>
         </div>`;
     }).join('');
 
     container.innerHTML = `
-        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; margin-top: 10px; text-align: left; font-size: 11px;">
-            <div style="font-weight: bold; color: #334155; margin-bottom: 6px; display: flex; justify-content: space-between;">
-                <span>📦 保存済み問題キャッシュ一覧</span>
-                <span style="color: #10b981; font-weight: normal;">✅ ${list.length}学年 保存済み</span>
+        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; margin-top: 12px; text-align: left;">
+            <div style="font-weight: bold; font-size: 12px; color: #334155; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <span>📦 保存済みキャッシュ一覧（合計 ${totalQ.toLocaleString()}問）</span>
+                <span style="background: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold;">${sortedItems.length}学年 保存済</span>
             </div>
-            <div style="max-height: 120px; overflow-y: auto;">
+            <div style="max-height: 140px; overflow-y: auto; padding-right: 4px;">
                 ${rows}
             </div>
         </div>
@@ -177,10 +213,81 @@ export async function renderQuestionCacheStatus() {
 }
 
 /**
- * 手動キャッシュクリア＆最新再同期（リアルタイム即時同期・リロード不要）
+ * 全学年の一括強制同期（小1〜高3）
  */
-export async function manualReloadCache() {
-    const currentGrade = document.getElementById('grade-select')?.value || '小4';
+export async function syncAllGradesNow() {
+    if (typeof window.showConfirm === 'function') {
+        const ok = await window.showConfirm("🚀 全学年（小1〜高3）の問題データを一括強制同期しますか？\n\n・Google ドライブ上の最新JSONをすべて直結取得\n・IndexedDBキャッシュを全学年一新\n・中1や小3の最新問題も一発で同期されます\n（※キャラクターやセーブデータには影響しません）");
+        if (!ok) return;
+    }
+
+    const btnAll = document.getElementById('btn-sync-all-grades');
+    const originalText = btnAll ? btnAll.innerHTML : '🚀 全学年を一括強制同期（小1〜高3）';
+    if (btnAll) {
+        btnAll.disabled = true;
+        btnAll.style.opacity = '0.7';
+    }
+
+    try {
+        if (typeof window.forceSyncAllGrades !== 'function') {
+            throw new Error('同期エンジンが利用できません。');
+        }
+
+        let syncedCount = 0;
+        let totalQuestions = 0;
+        let totalTyping = 0;
+
+        const results = await window.forceSyncAllGrades((grade, cur, total) => {
+            if (btnAll) {
+                btnAll.innerHTML = `⏳ (${cur}/${total}) 【${grade}】を取得中...`;
+            }
+        });
+
+        results.forEach(r => {
+            if (r.success) {
+                syncedCount++;
+                totalQuestions += (r.questionCount || 0);
+                totalTyping += (r.typingCount || 0);
+            }
+        });
+
+        await renderQuestionCacheStatus();
+
+        // 教科一覧が現在開いていれば再描画
+        if (typeof window.filterSubjects === 'function') {
+            window.filterSubjects();
+        }
+
+        alert(`🎉 全学年の一括強制同期が完了しました！\n\n・同期成功: ${syncedCount}/${results.length} 学年\n・通常問題: 合計 ${totalQuestions.toLocaleString()} 問\n・タイピング: 合計 ${totalTyping.toLocaleString()} 問\n\n全学年が最新の状態で即座にプレイ可能です！`);
+    } catch (e) {
+        alert("一括同期エラー: " + (e.message || e));
+    } finally {
+        if (btnAll) {
+            btnAll.innerHTML = originalText;
+            btnAll.disabled = false;
+            btnAll.style.opacity = '1';
+        }
+    }
+}
+
+/**
+ * 手動キャッシュクリア＆最新再同期（単独学年または学年未選択時全学年同期）
+ */
+export async function manualReloadCache(targetGrade) {
+    const selectedGrade = targetGrade || document.getElementById('grade-select')?.value;
+    
+    // 学年が選択されていない場合は全学年一括同期を案内
+    if (!selectedGrade) {
+        if (typeof window.showConfirm === 'function') {
+            const doAll = await window.showConfirm("学年が未選択です。全学年（小1〜高3）を一括で強制同期しますか？\n（「キャンセル」を押すと特定の学年を選択してから同期できます）");
+            if (doAll) {
+                return syncAllGradesNow();
+            }
+            return;
+        }
+    }
+
+    const currentGrade = selectedGrade || '小4';
     
     if (typeof window.showConfirm === 'function') {
         const ok = await window.showConfirm(`【${currentGrade}】の最新問題データをサーバーから今すぐ強制取得しますか？\n\n・リモートビルドされた最新のGoogleドライブJSONを直結取得\n・IndexedDBキャッシュを最新に即時上書き\n・画面の教科一覧もその場で最新化されます\n（※キャラクターやセーブデータには一切影響しません）`);
@@ -188,8 +295,8 @@ export async function manualReloadCache() {
     }
 
     const btn = document.getElementById('btn-manual-sync');
-    const originalText = btn ? btn.innerText : '🔄 問題キャッシュを再取得（強制同期）';
-    if (btn) { btn.innerText = '⏳ サーバーから最新問題を取得中...'; btn.disabled = true; }
+    const originalText = btn ? btn.innerHTML : `🔄 【${currentGrade}】のみ強制同期`;
+    if (btn) { btn.innerHTML = '⏳ 最新問題を取得中...'; btn.disabled = true; }
 
     try {
         if (typeof window.forceSyncGradeQuestions === 'function') {
@@ -197,7 +304,6 @@ export async function manualReloadCache() {
             await renderQuestionCacheStatus();
             alert(`🎉 【${res.grade}】の最新問題を同期しました！\n\n・通常問題: ${res.questionCount}問\n・タイピング: ${res.typingCount}問\n・更新日時: ${res.updatedAt}\n\nゲームに即座に反映されました！`);
         } else {
-            // フォールバック: キャッシュクリア
             if (typeof window.clearQuestionCache === 'function') {
                 await window.clearQuestionCache();
             }
@@ -207,12 +313,29 @@ export async function manualReloadCache() {
     } catch (e) {
         alert("同期エラー: " + (e.message || e));
     } finally {
-        if (btn) { btn.innerText = originalText; btn.disabled = false; }
+        if (btn) { btn.innerHTML = originalText; btn.disabled = false; }
+    }
+}
+
+/**
+ * キャッシュの完全消去
+ */
+export async function clearAllCacheConfirm() {
+    if (typeof window.showConfirm === 'function') {
+        const ok = await window.showConfirm("⚠️ 保存されている問題キャッシュをすべて消去しますか？\n\n次回学年選択時にサーバーから自動再取得されます。\n（※所持キャラやXP、進行度は保持されます）");
+        if (!ok) return;
+    }
+    if (typeof window.clearQuestionCache === 'function') {
+        await window.clearQuestionCache();
+        await renderQuestionCacheStatus();
+        alert("問題キャッシュを消去しました。");
     }
 }
 
 if (typeof window !== 'undefined') {
     window.manualReloadCache = manualReloadCache;
+    window.syncAllGradesNow = syncAllGradesNow;
+    window.clearAllCacheConfirm = clearAllCacheConfirm;
     window.renderQuestionCacheStatus = renderQuestionCacheStatus;
 }
 
@@ -606,6 +729,11 @@ export function openVersionHistory() {
     closeAllCategoryModals();
     document.getElementById('version-overlay')?.classList.remove('hidden'); 
     renderQuestionCacheStatus();
+    const curG = document.getElementById('grade-select')?.value;
+    const btnSync = document.getElementById('btn-manual-sync');
+    if (btnSync) {
+        btnSync.innerHTML = curG ? `🔄 選択中【${curG}】のみ強制同期` : '🔄 選択学年のみ強制同期';
+    }
 }
 export function closeVersionHistory() { 
     document.getElementById('version-overlay')?.classList.add('hidden'); 
