@@ -564,14 +564,12 @@ export async function downloadData() {
     if (btn) { btn.innerText = "受信中..."; btn.disabled = true; }
 
     try {
-        console.log(`[SQ-Sync] データ受信リクエスト送信: ID=${inputId}`);
         const res = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify({ action: 'load', userId: inputId })
         });
         const json = await res.json();
-        console.log('[SQ-Sync] 受信レスポンス:', json);
 
         if (json.questions || json.appVersion) {
             alert("【エラー】\nサーバー設定が反映されていません。GASのデプロイ状態をご確認ください。");
