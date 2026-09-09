@@ -371,7 +371,6 @@ function renderPartyZukanGrid() {
 
         const currentR = (inv && inv.currentRarity) ? inv.currentRarity : c.rarity;
         const lv = (inv && typeof inv.level === 'number' && inv.level >= 1) ? inv.level : 1;
-        const decoName = getDisplayName(c, inv, false);
         const cost = getTbCharaCost(c, inv);
 
         let badgeHtml = '';
