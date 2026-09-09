@@ -2,8 +2,8 @@
 // js/api.js (GASバックエンド通信・クラウド同期)
 // ==========================================
 
-import { API_URL, rawData, gameState, dailyMissions, runtimeState, saveGame } from './state.js?v=10.1.2';
-import { isGradeMatch, ALL_GRADES } from './utils.js?v=10.1.2';
+import { API_URL, rawData, gameState, dailyMissions, runtimeState, saveGame } from './state.js?v=10.1.4';
+import { isGradeMatch, ALL_GRADES } from './utils.js?v=10.1.4';
 
 // ==========================================
 // IndexedDB スマートキャッシュマネージャー
@@ -53,7 +53,7 @@ function parseDateTime(timeStr) {
 }
 
 /**
- * 指定学年の問題キャッシュを取得（全角・半角の両キーを走査し最新・最多のものを返却）
+ * 指定学年の問題キャッシュを取得（半角正規化キーを優先検索し、全角キーもフォールバック対応）
  */
 async function getCachedGradeData(gradeCode) {
     const db = await openQuestionDB();
@@ -61,40 +61,33 @@ async function getCachedGradeData(gradeCode) {
     const clean = gradeCode ? gradeCode.toString().trim() : '';
     const halfG = toHalfWidth(clean);
     const fullG = toFullWidth(clean);
-    const keys = [...new Set([clean, halfG, fullG].filter(Boolean))];
 
     return new Promise((resolve) => {
         try {
             const tx = db.transaction(STORE_NAME, 'readonly');
             const store = tx.objectStore(STORE_NAME);
-            const candidates = [];
-            let pending = keys.length;
 
-            keys.forEach(k => {
-                const req = store.get(k);
-                req.onsuccess = () => {
-                    if (req.result && req.result.data) candidates.push(req.result);
-                    pending--;
-                    if (pending === 0) finish();
-                };
-                req.onerror = () => {
-                    pending--;
-                    if (pending === 0) finish();
-                };
-            });
-
-            function finish() {
-                if (candidates.length === 0) return resolve(null);
-                candidates.sort((a, b) => {
-                    const timeA = parseDateTime(a.updatedAt);
-                    const timeB = parseDateTime(b.updatedAt);
-                    if (timeA !== timeB) return timeB - timeA;
-                    const countA = (a.questionCount || 0) + (a.typingCount || 0);
-                    const countB = (b.questionCount || 0) + (b.typingCount || 0);
-                    return countB - countA;
-                });
-                resolve(candidates[0]);
-            }
+            // 1. まず半角キー（正規化キー）で検索
+            const reqHalf = store.get(halfG);
+            reqHalf.onsuccess = () => {
+                if (reqHalf.result && reqHalf.result.data) {
+                    return resolve(reqHalf.result);
+                }
+                // 2. 半角で見つからず全角と異なる場合、全角キーでフォールバック検索
+                if (fullG && fullG !== halfG) {
+                    const reqFull = store.get(fullG);
+                    reqFull.onsuccess = () => {
+                        if (reqFull.result && reqFull.result.data) {
+                            return resolve(reqFull.result);
+                        }
+                        resolve(null);
+                    };
+                    reqFull.onerror = () => resolve(null);
+                } else {
+                    resolve(null);
+                }
+            };
+            reqHalf.onerror = () => resolve(null);
         } catch (e) {
             resolve(null);
         }
@@ -102,7 +95,7 @@ async function getCachedGradeData(gradeCode) {
 }
 
 /**
- * 指定学年の問題キャッシュを保存（全角・半角の両キーで保存し即座にヒットするようにする）
+ * 指定学年の問題キャッシュを保存（半角正規化キー1本に統一し、古い全角キーがあれば自動消去）
  */
 async function saveCachedGradeData(gradeCode, data) {
     const db = await openQuestionDB();
@@ -110,7 +103,6 @@ async function saveCachedGradeData(gradeCode, data) {
     const clean = gradeCode ? gradeCode.toString().trim() : '';
     const halfG = toHalfWidth(clean);
     const fullG = toFullWidth(clean);
-    const keys = [...new Set([clean, halfG, fullG].filter(Boolean))];
 
     return new Promise((resolve) => {
         try {
@@ -120,16 +112,21 @@ async function saveCachedGradeData(gradeCode, data) {
             const questionCount = Array.isArray(data.questions) ? data.questions.length : 0;
             const typingCount = Array.isArray(data.typing) ? data.typing.length : 0;
 
-            keys.forEach(k => {
-                store.put({
-                    grade: k,
-                    updatedAt: updatedAt,
-                    questionCount: questionCount,
-                    typingCount: typingCount,
-                    data: data,
-                    timestamp: Date.now()
-                });
+            // 半角正規化キーで保存
+            store.put({
+                grade: halfG,
+                updatedAt: updatedAt,
+                questionCount: questionCount,
+                typingCount: typingCount,
+                data: data,
+                timestamp: Date.now()
             });
+
+            // 過去の古い全角キー（例: '中１'）がストアに残っていれば削除して一本化
+            if (fullG && fullG !== halfG) {
+                store.delete(fullG);
+            }
+
             tx.oncomplete = () => resolve(true);
             tx.onerror = () => resolve(false);
         } catch (e) {
@@ -487,15 +484,16 @@ export function parseAndMergeGradeData(data, targetGrade) {
 }
 
 /**
- * サーバーから指定学年の最新データを取得（タイムアウト制御付き・全角半角候補から最新データを自動選択）
+ * サーバーから指定学年の最新データを取得（半角正規化キー優先・安全フェッチ）
  */
 async function fetchGradeFromServer(cleanGrade) {
     const halfG = toHalfWidth(cleanGrade);
     const fullG = toFullWidth(cleanGrade);
-    const candidateGrades = [...new Set([cleanGrade, fullG, halfG].filter(Boolean))];
+    // 半角正規化コードを第一候補に配置
+    const candidateGrades = [...new Set([halfG, cleanGrade, fullG].filter(Boolean))];
     const isDebug = window.location.search.includes('debug=true');
 
-    // 全候補（半角・全角）を並列フェッチ
+    // 全候補をフェッチ
     const fetchPromises = candidateGrades.map(async (tryGrade) => {
         const url = isDebug
             ? ('http://localhost:8000/sample_api.json?grade=' + encodeURIComponent(tryGrade) + '&t=' + Date.now())
@@ -527,20 +525,25 @@ async function fetchGradeFromServer(cleanGrade) {
     }
 
     if (validDataList.length === 0) return null;
-    if (validDataList.length === 1) return validDataList[0].data;
-
+    
     // 複数候補がある場合、1. 更新日時が最新 2. 通常問題＋タイピング数が多いものを最良データとして採用
-    validDataList.sort((a, b) => {
-        const timeA = parseDateTime(a.data.updatedAt || a.data.version);
-        const timeB = parseDateTime(b.data.updatedAt || b.data.version);
-        if (timeA !== timeB) return timeB - timeA;
-        const countA = (Array.isArray(a.data.questions) ? a.data.questions.length : 0) + (Array.isArray(a.data.typing) ? a.data.typing.length : 0);
-        const countB = (Array.isArray(b.data.questions) ? b.data.questions.length : 0) + (Array.isArray(b.data.typing) ? b.data.typing.length : 0);
-        return countB - countA;
-    });
+    if (validDataList.length > 1) {
+        validDataList.sort((a, b) => {
+            const timeA = parseDateTime(a.data.updatedAt || a.data.version);
+            const timeB = parseDateTime(b.data.updatedAt || b.data.version);
+            if (timeA !== timeB) return timeB - timeA;
+            const countA = (Array.isArray(a.data.questions) ? a.data.questions.length : 0) + (Array.isArray(a.data.typing) ? a.data.typing.length : 0);
+            const countB = (Array.isArray(b.data.questions) ? b.data.questions.length : 0) + (Array.isArray(b.data.typing) ? b.data.typing.length : 0);
+            return countB - countA;
+        });
+    }
 
     const best = validDataList[0];
-    console.log(`[SQ-Data] 候補【${candidateGrades.join(', ')}】から最良データ採用: ${best.tryGrade} (更新: ${best.data.updatedAt || 'N/A'}, 問題数: ${best.data.questions?.length || 0})`);
+    // 学年コードを半角正規化して返却
+    if (best.data) {
+        best.data.grade = halfG;
+        best.data.gradeCode = halfG;
+    }
     return best.data;
 }
 
@@ -548,57 +551,77 @@ async function fetchGradeFromServer(cleanGrade) {
 const activeSyncPromises = new Map();
 
 /**
- * バックグラウンドで最新データをサーバーと照合し、差分があれば自動更新（SWR Revalidate）
+ * バックグラウンドで最新データをサーバーと照合し、最新データが存在する場合のみ安全に更新（SWR Revalidate）
  */
 async function syncGradeInBackground(cleanGrade) {
-    if (activeSyncPromises.has(cleanGrade)) {
-        return activeSyncPromises.get(cleanGrade);
+    const halfG = toHalfWidth(cleanGrade);
+    if (activeSyncPromises.has(halfG)) {
+        return activeSyncPromises.get(halfG);
     }
 
     const syncPromise = (async () => {
         try {
-            const serverData = await fetchGradeFromServer(cleanGrade);
+            const serverData = await fetchGradeFromServer(halfG);
             if (!serverData) return false;
 
-            const cached = await getCachedGradeData(cleanGrade);
+            const cached = await getCachedGradeData(halfG);
             const serverQuestions = Array.isArray(serverData.questions) ? serverData.questions.length : 0;
             const serverTyping = Array.isArray(serverData.typing) ? serverData.typing.length : 0;
             const serverVer = String(serverData.updatedAt || serverData.version || '');
 
-            // 差分検知: キャッシュ未存在、更新日時変更、または問題数・タイピング数の変化
-            const isDifferent = !cached ||
-                (serverVer && cached.updatedAt !== serverVer) ||
-                (cached.questionCount !== serverQuestions) ||
-                (cached.typingCount !== serverTyping);
+            let shouldUpdate = false;
 
-            if (isDifferent) {
-                // 1. IndexedDB キャッシュを最新データで上書き保存
-                await saveCachedGradeData(cleanGrade, serverData);
+            if (!cached || !cached.data) {
+                // キャッシュ未存在なら無条件に反映
+                shouldUpdate = true;
+            } else {
+                const timeServer = parseDateTime(serverVer);
+                const timeCached = parseDateTime(cached.updatedAt);
+                const cachedQuestions = cached.questionCount || 0;
+                const cachedTyping = cached.typingCount || 0;
+
+                // サーバーの更新日時がキャッシュより新しい場合
+                if (timeServer > timeCached) {
+                    shouldUpdate = true;
+                }
+                // 日時が同等または未記録でも、問題数やタイピング数が増加している場合
+                else if (timeServer >= timeCached && (serverQuestions > cachedQuestions || serverTyping > cachedTyping)) {
+                    shouldUpdate = true;
+                }
+                // サーバーの更新日時は同じだが問題数が一致しない場合（かつサーバー側が空でないこと）
+                else if (timeServer === timeCached && serverQuestions > 0 && (serverQuestions !== cachedQuestions || serverTyping !== cachedTyping)) {
+                    shouldUpdate = true;
+                }
+            }
+
+            if (shouldUpdate) {
+                // 1. IndexedDB キャッシュを最新データで安全に上書き保存
+                await saveCachedGradeData(halfG, serverData);
                 // 2. メモリ内の問題データも最新データでクリーンに置き換え
-                parseAndMergeGradeData(serverData, cleanGrade);
-                console.log(`[SQ-Sync] 学年【${cleanGrade}】の最新問題を自動検知し同期完了（通常: ${serverQuestions}問 / タイピング: ${serverTyping}問 / 更新: ${serverVer || 'N/A'}）`);
+                parseAndMergeGradeData(serverData, halfG);
+                console.log(`[SQ-Sync] 学年【${halfG}】の最新問題を自動検知し同期完了（通常: ${serverQuestions}問 / タイピング: ${serverTyping}問 / 更新: ${serverVer || 'N/A'}）`);
 
                 // 3. 現在タイトル画面でこの学年が選択されている場合は教科一覧を自動再描画
                 if (typeof window !== 'undefined') {
                     const currentSelectedGrade = document.getElementById('grade-select')?.value;
-                    if (currentSelectedGrade && isGradeMatch(currentSelectedGrade, cleanGrade) && typeof window.filterSubjects === 'function') {
+                    if (currentSelectedGrade && isGradeMatch(currentSelectedGrade, halfG) && typeof window.filterSubjects === 'function') {
                         window.filterSubjects();
                     }
                 }
                 return true;
             } else {
-                console.log(`[SQ-Sync] 学年【${cleanGrade}】は最新です（通常: ${serverQuestions}問）`);
+                console.log(`[SQ-Sync] 学年【${halfG}】は最新です（通常: ${serverQuestions}問）`);
                 return false;
             }
         } catch (e) {
-            console.warn(`[SQ-Sync] 学年【${cleanGrade}】の同期失敗:`, e);
+            console.warn(`[SQ-Sync] 学年【${halfG}】の同期失敗:`, e);
             return false;
         } finally {
-            activeSyncPromises.delete(cleanGrade);
+            activeSyncPromises.delete(halfG);
         }
     })();
 
-    activeSyncPromises.set(cleanGrade, syncPromise);
+    activeSyncPromises.set(halfG, syncPromise);
     return syncPromise;
 }
 

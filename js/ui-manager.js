@@ -9,7 +9,7 @@ import {
     runtimeState,
     GUIDE_DATA,
     saveGame
-} from './state.js?v=10.1.2';
+} from './state.js?v=10.1.4';
 
 import {
     getDisplayName,
@@ -17,7 +17,7 @@ import {
     playSE,
     ALL_GRADES,
     isGradeMatch
-} from './utils.js?v=10.1.2';
+} from './utils.js?v=10.1.4';
 
 const SUBJECT_ORDER = [
     '国語', '算数', '数学', '理科', '社会', '英語', '情報',

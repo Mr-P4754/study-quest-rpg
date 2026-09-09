@@ -576,20 +576,52 @@ export function loadSaveData() {
     gameState.itemLevels = safeParse('sq_items_v2', {});
     gameState.charaInventory = safeParse('sq_inventory', {});
     
+    // 【多段自動復旧ネット】
+    // もし charaInventory が空、または破損している場合、直近のバックアップまたは旧キーから復元を試行
     if (!gameState.charaInventory || Object.keys(gameState.charaInventory).length === 0) {
-        const oldCharas = localStorage.getItem('sq_charas');
-        if (oldCharas) {
+        // 1. 自動バックアップ (sq_save_backup) からの自動復元試行
+        const backupRaw = localStorage.getItem('sq_save_backup');
+        if (backupRaw) {
             try {
-                const idList = JSON.parse(oldCharas);
-                if (Array.isArray(idList) && idList.length > 0) {
-                    idList.forEach(id => {
-                        gameState.charaInventory[id] = { level: 1, count: 1, exp: 0 };
-                    });
+                const backup = JSON.parse(backupRaw);
+                if (backup && backup.charaInventory && Object.keys(backup.charaInventory).length > 0) {
+                    console.log('[SQ-Restore] 自動バックアップ (sq_save_backup) から生徒データを自動復元しました。');
+                    gameState.charaInventory = backup.charaInventory;
+                    if (backup.xp && !gameState.xp) gameState.xp = parseInt(backup.xp, 10);
+                    if (backup.itemLevels && (!gameState.itemLevels || Object.keys(gameState.itemLevels).length === 0)) gameState.itemLevels = backup.itemLevels;
+                    if (backup.equipped) gameState.equipped = String(backup.equipped);
+                    if (backup.stats && (!gameState.stats || gameState.stats.totalPlay === 0)) gameState.stats = backup.stats;
+                    if (backup.unlockedTitles && (!gameState.unlockedTitles || gameState.unlockedTitles.length === 0)) gameState.unlockedTitles = backup.unlockedTitles;
+                    if (backup.inventory && (!gameState.inventory || gameState.inventory.redPages === 0)) gameState.inventory = backup.inventory;
+                    // 復元した正常データをメインストレージへ再保存
                     localStorage.setItem('sq_inventory', JSON.stringify(gameState.charaInventory));
+                    localStorage.setItem('sq_xp', gameState.xp);
+                    localStorage.setItem('sq_items_v2', JSON.stringify(gameState.itemLevels));
                 }
-            } catch(e) {}
+            } catch (e) {
+                console.warn('[SQ-Restore] バックアップ自動復元失敗:', e);
+            }
         }
-        if (Object.keys(gameState.charaInventory).length === 0) {
+
+        // 2. 旧キー (sq_charas) からの救出復元
+        if (!gameState.charaInventory || Object.keys(gameState.charaInventory).length === 0) {
+            const oldCharas = localStorage.getItem('sq_charas');
+            if (oldCharas) {
+                try {
+                    const idList = JSON.parse(oldCharas);
+                    if (Array.isArray(idList) && idList.length > 0) {
+                        idList.forEach(id => {
+                            gameState.charaInventory[id] = { level: 1, count: 1, exp: 0 };
+                        });
+                        localStorage.setItem('sq_inventory', JSON.stringify(gameState.charaInventory));
+                        console.log('[SQ-Restore] 旧キャラキー (sq_charas) から復元しました。');
+                    }
+                } catch(e) {}
+            }
+        }
+
+        // 3. 最低保証（新規プレイまたは復旧データ無しの初期状態）
+        if (!gameState.charaInventory || Object.keys(gameState.charaInventory).length === 0) {
             gameState.charaInventory = { "1": { level: 1, count: 1, exp: 0 } };
         }
     }
@@ -682,6 +714,14 @@ export function loadSaveData() {
 }
 
 export function saveGame() {
+    // 【最優先・絶対厳守安全ガード】
+    // charaInventory が未定義、オブジェクトでない、または空の場合はセーブデータ破壊を防ぐため即座に保存を中断
+    if (!gameState.charaInventory || typeof gameState.charaInventory !== 'object' || Object.keys(gameState.charaInventory).length === 0) {
+        console.warn('[SQ-Security] セーブデータの保護ガードが作動しました: charaInventory が空または未ロードのため saveGame を中断しました。');
+        return;
+    }
+
+    // メインセーブデータの安全書き込み
     localStorage.setItem('sq_xp', gameState.xp);
     localStorage.setItem('sq_equip', gameState.equipped);
     localStorage.setItem('sq_items_v2', JSON.stringify(gameState.itemLevels));
@@ -697,5 +737,26 @@ export function saveGame() {
     localStorage.setItem('sq_calc_records', JSON.stringify(gameState.calcRecords || {}));
     localStorage.setItem('sq_item_inventory', JSON.stringify(gameState.inventory));
     localStorage.setItem('sq_studyel', JSON.stringify(gameState.studyel));
+
+    // 【自動バックアップ二重保存】万一の破損時に備え、正常なセーブデータのスナップショットを別キーへ退避保存
+    try {
+        const backupSnapshot = {
+            timestamp: Date.now(),
+            xp: gameState.xp,
+            equipped: gameState.equipped,
+            itemLevels: gameState.itemLevels,
+            charaInventory: gameState.charaInventory,
+            teamParty: gameState.teamParty,
+            stats: gameState.stats,
+            subjectStats: gameState.subjectStats,
+            unlockedTitles: gameState.unlockedTitles,
+            claimedGifts: gameState.claimedGifts,
+            inventory: gameState.inventory,
+            studyel: gameState.studyel
+        };
+        localStorage.setItem('sq_save_backup', JSON.stringify(backupSnapshot));
+    } catch (backupErr) {
+        console.warn('[SQ-Security] バックアップ保存スキップ:', backupErr);
+    }
 }
 

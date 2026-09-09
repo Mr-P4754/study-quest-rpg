@@ -9,12 +9,12 @@
     <title>STUDY QUEST RPG</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✏️</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/base.css?v=10.1.3">
-    <link rel="stylesheet" href="css/layout.css?v=10.1.3">
-    <link rel="stylesheet" href="css/components.css?v=10.1.3">
-    <link rel="stylesheet" href="css/quests.css?v=10.1.3">
-    <link rel="stylesheet" href="css/special-quest.css?v=10.1.3">
-    <link rel="stylesheet" href="css/studyel.css?v=10.1.3">
+    <link rel="stylesheet" href="css/base.css?v=10.1.4">
+    <link rel="stylesheet" href="css/layout.css?v=10.1.4">
+    <link rel="stylesheet" href="css/components.css?v=10.1.4">
+    <link rel="stylesheet" href="css/quests.css?v=10.1.4">
+    <link rel="stylesheet" href="css/special-quest.css?v=10.1.4">
+    <link rel="stylesheet" href="css/studyel.css?v=10.1.4">
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script>
         window.addEventListener('error', function(e) {
@@ -44,7 +44,7 @@
         <div id="campaign-text" class="campaign-text"></div>
     </div>
     <div class="title-logo">STUDY QUEST</div>
-    <div class="version-text" onclick="openVersionHistory()">Ver 10.1.3</div>
+    <div class="version-text" onclick="openVersionHistory()">Ver 10.1.4</div>
     
     <div id="title-news-banner" class="title-news-banner hidden" onclick="openCategory('special')">
         <span id="title-news-badge" class="title-news-badge">NEW!</span>
@@ -871,7 +871,14 @@
     <div class="modal modal-w500">
         <h2 class="text-blue mt-0">📋 更新履歴</h2>
         <div class="version-list version-list-box">
-            <h4>Ver 10.1.3（最新安定版：全学年一括強制同期＆全角半角最新自動判定）</h4>
+            <h4>Ver 10.1.4（最新安定版：生徒セーブデータ二重保護・自動復旧＆学年コード半角完全統一）</h4>
+            <ul>
+                <li>🛡️ <b>生徒セーブデータ保護ガード</b>: 空インベントリや未ロード状態でのセーブ上書きを完全防止する安全ガードを実装。</li>
+                <li>💾 <b>多段自動バックアップ・自動復旧</b>: セーブデータのスナップショット自動二重保存（sq_save_backup）と、破損・消失時の多段自動復元ネットを新設。</li>
+                <li>🎯 <b>学年コード・ファイル名の半角統一</b>: GAS生成およびIndexedDBキャッシュの学年コードを半角（中1〜中3等）に完全統一し、重複ファイル生成とキャッシュ不整合を根本解決。</li>
+                <li>📦 <b>IndexedDBキーの一本化と旧全角キー自動整理</b>: キャッシュDB内の古い全角キーを自動削除し、常に最新データでクリーンに同期。</li>
+            </ul>
+            <h4>Ver 10.1.3（全学年一括強制同期＆全角半角最新自動判定）</h4>
             <ul>
                 <li>🚀 <b>全学年の一括強制同期（小1〜高3）</b>: バージョン情報画面に「全学年を一括強制同期」ボタンを新設。ワンクリックで全12学年の最新問題を即時取得・キャッシュ保存。</li>
                 <li>🎯 <b>全角・半角ハイブリッド最新自動判定</b>: 中1（全角「中１」1,450問／半角「中1」190問）のような複数ファイルが存在する場合に、更新日時が最も新しい最適データを自動判定してロードする安全エンジンを実装。</li>
@@ -1128,7 +1135,7 @@
     </div>
 </div>
 
-<script type="module" src="js/main.js?v=10.1.3"></script>
+<script type="module" src="js/main.js?v=10.1.4"></script>
 </body>
 </html>
 
