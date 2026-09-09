@@ -9,12 +9,12 @@
     <title>STUDY QUEST RPG</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✏️</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/base.css?v=10.1.4">
-    <link rel="stylesheet" href="css/layout.css?v=10.1.4">
-    <link rel="stylesheet" href="css/components.css?v=10.1.4">
-    <link rel="stylesheet" href="css/quests.css?v=10.1.4">
-    <link rel="stylesheet" href="css/special-quest.css?v=10.1.4">
-    <link rel="stylesheet" href="css/studyel.css?v=10.1.4">
+    <link rel="stylesheet" href="css/base.css?v=10.1.5">
+    <link rel="stylesheet" href="css/layout.css?v=10.1.5">
+    <link rel="stylesheet" href="css/components.css?v=10.1.5">
+    <link rel="stylesheet" href="css/quests.css?v=10.1.5">
+    <link rel="stylesheet" href="css/special-quest.css?v=10.1.5">
+    <link rel="stylesheet" href="css/studyel.css?v=10.1.5">
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script>
         window.addEventListener('error', function(e) {
@@ -44,7 +44,7 @@
         <div id="campaign-text" class="campaign-text"></div>
     </div>
     <div class="title-logo">STUDY QUEST</div>
-    <div class="version-text" onclick="openVersionHistory()">Ver 10.1.4</div>
+    <div class="version-text" onclick="openVersionHistory()">Ver 10.1.5</div>
     
     <div id="title-news-banner" class="title-news-banner hidden" onclick="openCategory('special')">
         <span id="title-news-badge" class="title-news-badge">NEW!</span>
@@ -78,6 +78,10 @@
         </button>
     </div>
     
+    <div class="title-sync-bar">
+        <div id="cloud-sync-indicator" class="cloud-sync-indicator sync-badge-idle" onclick="openSyncMenu()" title="クラウド同期状態（クリックでデータ管理を開く）">☁️ 自動保存: 有効</div>
+    </div>
+
     <div class="title-footer">
         <div id="title-chara-img" class="title-chara-frame"></div>
         <div>装備: <span id="title-equipped-name" class="text-white font-bold">なし</span><br>所持XP: <span id="title-xp" class="text-gold">0</span></div>
@@ -422,14 +426,18 @@
 <div id="sync-overlay" class="overlay overlay-z400 hidden">
     <div class="modal modal-w400">
         <div class="modal-header-row">
-            <h2 class="text-blue m-0">☁️ クラウドセーブ</h2>
+            <h2 class="text-blue m-0">☁️ データ管理</h2>
             <button class="help-btn" onclick="GuideModule.open('system')">❓</button>
         </div>
-        <p class="text-left text-sm">この機能を使うと、スマホや別のPCにデータを引き継げます。</p>
+        <p class="text-left text-sm">ゲームプレイの節目に最新データが自動でクラウドへ保存されます。<br>端末の故障や初期化に備えて、IDカード画像を保存しておくことを推奨します。</p>
         <div class="sync-id-box">
-            <div class="font-bold text-dark">あなたのID</div>
+            <div class="font-bold text-dark">あなたの固有引き継ぎID</div>
             <div id="my-user-id" class="sync-id-display">--------</div>
-            <button class="menu-btn btn-dark-blue mt-5 btn-save-action" onclick="uploadData()">☁️ このデータをクラウドに保存</button>
+            <div id="sync-modal-status" class="sync-modal-status sync-badge-idle">☁️ 自動保存: 有効</div>
+            <div class="sync-id-actions">
+                <button class="menu-btn btn-dark-blue mt-5 btn-save-action" onclick="uploadData()">☁️ 今すぐクラウドに手動保存</button>
+                <button class="menu-btn btn-green mt-5 btn-idcard-action" onclick="generateAndDownloadIdCard()">📷 IDカードを画像として保存</button>
+            </div>
         </div>
         <hr class="sync-divider">
         <div class="text-left text-sm font-bold text-orange">データを読み込む (上書き注意)</div>
@@ -871,7 +879,15 @@
     <div class="modal modal-w500">
         <h2 class="text-blue mt-0">📋 更新履歴</h2>
         <div class="version-list version-list-box">
-            <h4>Ver 10.1.4（最新安定版：生徒セーブデータ二重保護・自動復旧＆学年コード半角完全統一）</h4>
+            <h4>Ver 10.1.5（最新安定版：強制クラウドセーブ＆ID自動保全システム導入）</h4>
+            <ul>
+                <li>☁️ <b>強制クラウドセーブ（CloudSyncQueue）</b>: 通常クエスト・サバイバル・計算・探索・チームバトル等のリザルト確定時、および画面離脱時（タブ閉じ等）に、生徒の最新プレイデータを自動かつ非同期でクラウドへ安全バックアップ。</li>
+                <li>⚡ <b>完全ノンブロッキング（楽観的UI）</b>: 通信待ちのスピナーや画面ロックを一切排除。リザルト画面から即座に次へ進める快適なプレイ体験を担保。</li>
+                <li>🔄 <b>指数バックオフ＋Full Jitterリトライ</b>: GAS同時接続エラー（429/503/ロック競合）に耐えるため、最大5回まで負荷を分散しながら自動再試行。最新リクエストの自動統合（Coalesce）と離脱時 keepalive POST を完備。</li>
+                <li>📷 <b>引き継ぎIDカード動的生成・ワンタップ保存</b>: 「☁️ データ管理」画面に「📷 IDカードを画像として保存」を新設。HTML5 Canvas により固有ID・所持XP・復旧手順を明記したPNGカード画像を動的生成・保存可能に。</li>
+                <li>🛡️ <b>データ保護セーフガードの徹底</b>: 空データや未初期化状態でのクラウド上書きを物理遮断し、生徒のセーブデータを永久保全。</li>
+            </ul>
+            <h4>Ver 10.1.4（生徒セーブデータ二重保護・自動復旧＆学年コード半角完全統一）</h4>
             <ul>
                 <li>🛡️ <b>生徒セーブデータ保護ガード</b>: 空インベントリや未ロード状態でのセーブ上書きを完全防止する安全ガードを実装。</li>
                 <li>💾 <b>多段自動バックアップ・自動復旧</b>: セーブデータのスナップショット自動二重保存（sq_save_backup）と、破損・消失時の多段自動復元ネットを新設。</li>
@@ -1135,7 +1151,7 @@
     </div>
 </div>
 
-<script type="module" src="js/main.js?v=10.1.4"></script>
+<script type="module" src="js/main.js?v=10.1.5b"></script>
 </body>
 </html>
 

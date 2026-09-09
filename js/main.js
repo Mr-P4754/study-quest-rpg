@@ -32,9 +32,9 @@ import {
     loadSaveData,
     saveGame,
     getDefaultStudyelState
-} from './state.js?v=10.1.4';
+} from './state.js?v=10.1.5b';
 
-import * as StudyelEngine from './studyel-engine.js?v=10.1.4';
+import * as StudyelEngine from './studyel-engine.js?v=10.1.5b';
 window.StudyelEngine = StudyelEngine;
 
 import {
@@ -51,13 +51,14 @@ import {
     stopBGM,
     playMmlBGM,
     BGM_MML
-} from './utils.js?v=10.1.4';
+} from './utils.js?v=10.1.5b';
 
 import {
     uploadData,
     downloadData,
-    fetchData
-} from './api.js?v=10.1.4';
+    fetchData,
+    cloudSync
+} from './api.js?v=10.1.5b';
 
 import {
     showCutIn,
@@ -72,7 +73,7 @@ import {
     finishGame,
     handleResultClose,
     backToTitle
-} from './battle-core.js?v=10.1.4';
+} from './battle-core.js?v=10.1.5b';
 
 import {
     startNormalGameCheck,
@@ -107,7 +108,7 @@ import {
     toggleRelief,
     startOathGame,
     startReliefGame
-} from './quest-normal.js?v=10.1.4';
+} from './quest-normal.js?v=10.1.5b';
 
 import {
     addRogueLog,
@@ -130,7 +131,7 @@ import {
     updateRogueUI,
     escapeRogueConfirm,
     exitRogueSystem
-} from './quest-explore.js?v=10.1.4';
+} from './quest-explore.js?v=10.1.5b';
 
 import {
     openGacha,
@@ -178,7 +179,7 @@ import {
     checkLoginBonus,
     closeLoginBonus,
     checkMissionDate
-} from './gacha-shop.js?v=10.1.4';
+} from './gacha-shop.js?v=10.1.5b';
 
 import {
     initTitle,
@@ -227,8 +228,10 @@ import {
     syncAllGradesNow,
     clearAllCacheConfirm,
     renderQuestionCacheStatus,
-    GuideModule
-} from './ui-manager.js?v=10.1.4';
+    GuideModule,
+    generateAndDownloadIdCard,
+    updateCloudSyncIndicator
+} from './ui-manager.js?v=10.1.5b';
 
 import {
     openTeamBattleSetup,
@@ -279,7 +282,7 @@ import {
     stopTbQrScanner,
     setScannedData,
     clearScannedData
-} from './special-quest-engine.js?v=10.1.4';
+} from './special-quest-engine.js?v=10.1.5b';
 
 // ==========================================
 // インライン onclick / 動的UI互換用 window 一括バインド
@@ -335,6 +338,7 @@ Object.assign(globalScope, {
     uploadData,
     downloadData,
     fetchData,
+    cloudSync,
 
     // バトルコア
     showCutIn,
@@ -502,6 +506,8 @@ Object.assign(globalScope, {
     clearAllCacheConfirm,
     renderQuestionCacheStatus,
     GuideModule,
+    generateAndDownloadIdCard,
+    updateCloudSyncIndicator,
     
     // チームバトルクエスト関連
     openTeamBattleSetup,

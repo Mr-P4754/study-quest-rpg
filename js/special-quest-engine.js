@@ -5,9 +5,10 @@
  * ==========================================
  */
 
-import { gameState, rawData, saveGame, runtimeState, RARITY_CAPS, LV_BONUS_RATE } from './state.js?v=10.1.4';
-import { getDisplayName, playSE, playBGM, stopBGM, updateMuteButtonsUI, ALL_GRADES, isGradeMatch } from './utils.js?v=10.1.4';
-import { closeAllCategoryModals, returnToCurrentCategory, showAlert, showConfirm } from './ui-manager.js?v=10.1.4';
+import { gameState, rawData, saveGame, runtimeState, RARITY_CAPS, LV_BONUS_RATE } from './state.js?v=10.1.5';
+import { getDisplayName, playSE, playBGM, stopBGM, updateMuteButtonsUI, ALL_GRADES, isGradeMatch } from './utils.js?v=10.1.5';
+import { closeAllCategoryModals, returnToCurrentCategory, showAlert, showConfirm } from './ui-manager.js?v=10.1.5';
+import { cloudSync } from './api.js?v=10.1.5';
 
 // ----------------------------------------------------
 // 内部状態管理 & コスト定義
@@ -1907,6 +1908,9 @@ export function finishTeamBattle(isWin, isEscape = false) {
     }
 
     saveGame();
+    if (cloudSync) {
+        cloudSync.requestSync();
+    }
 
     let rewardText = '';
     if (acquiredNames.length > 0) {

@@ -11,7 +11,7 @@ import {
     runtimeState,
     LV_BONUS_RATE,
     saveGame
-} from './state.js?v=10.1.4';
+} from './state.js?v=10.1.5';
 
 import {
     getDisplayName,
@@ -20,12 +20,12 @@ import {
     playBGM,
     stopBGM,
     isGradeMatch
-} from './utils.js?v=10.1.4';
+} from './utils.js?v=10.1.5';
 
 import {
     updateMissionProgress,
     checkTitles
-} from './gacha-shop.js?v=10.1.4';
+} from './gacha-shop.js?v=10.1.5';
 
 import {
     showAppModal,
@@ -33,7 +33,9 @@ import {
     showConfirm,
     updateTitleInfo,
     addCalcRecord
-} from './ui-manager.js?v=10.1.4';
+} from './ui-manager.js?v=10.1.5';
+
+import { cloudSync } from './api.js?v=10.1.5';
 
 export function showCutIn(t) { 
     const str = String(t);
@@ -565,6 +567,9 @@ export function finishGame(isClear) {
     }
 
     saveGame(); 
+    if (cloudSync) {
+        cloudSync.requestSync();
+    }
     
     const resTitle = document.getElementById('res-title'); if(resTitle) { resTitle.innerText=isClear?"QUEST CLEAR!":"GAME OVER"; resTitle.style.color=isClear?"#f1c40f":"#bdc3c7"; }
     const resIcon = document.getElementById('res-icon'); if(resIcon) resIcon.innerText=isClear?"🎉":"💔"; 

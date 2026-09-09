@@ -9,7 +9,7 @@ import {
     runtimeState,
     GUIDE_DATA,
     saveGame
-} from './state.js?v=10.1.4';
+} from './state.js?v=10.1.5';
 
 import {
     getDisplayName,
@@ -17,7 +17,9 @@ import {
     playSE,
     ALL_GRADES,
     isGradeMatch
-} from './utils.js?v=10.1.4';
+} from './utils.js?v=10.1.5';
+
+import { cloudSync } from './api.js?v=10.1.5';
 
 const SUBJECT_ORDER = [
     '国語', '算数', '数学', '理科', '社会', '英語', '情報',
@@ -80,6 +82,12 @@ export function initTitle() {
     if (bHpSelect) bHpSelect.value = "";
 
     updateTitleInfo();
+
+    // クラウド同期状態の購読（二重登録防止）
+    if (cloudSync && !initTitle.subscribedSync) {
+        initTitle.subscribedSync = true;
+        cloudSync.subscribe(updateCloudSyncIndicator);
+    }
 }
 
 export async function filterSubjects() {
@@ -718,12 +726,219 @@ export function openSyncMenu() {
     closeAllCategoryModals();
     const idEl = document.getElementById('my-user-id');
     if (idEl) idEl.innerText = runtimeState.currentUserId || '--------';
+    if (cloudSync) {
+        updateCloudSyncIndicator(cloudSync.status, cloudSync.getFormattedSyncTime());
+    }
     document.getElementById('sync-overlay')?.classList.remove('hidden');
 }
 export function closeSyncMenu() {
     document.getElementById('sync-overlay')?.classList.add('hidden');
     returnToCurrentCategory();
 }
+
+/**
+ * クラウド同期インジケーターのUI表示更新
+ * @param {'synced'|'saving'|'retrying'|'error'|'idle'} status
+ * @param {string} timeStr - 例: '14:30'
+ */
+export function updateCloudSyncIndicator(status, timeStr) {
+    const titleInd = document.getElementById('cloud-sync-indicator');
+    const modalInd = document.getElementById('sync-modal-status');
+
+    let text = '';
+    let badgeClass = '';
+
+    switch(status) {
+        case 'synced':
+            text = `☁️ 同期完了 ${timeStr || ''}`;
+            badgeClass = 'sync-badge-synced';
+            break;
+        case 'saving':
+            text = `🔄 クラウド保存中...`;
+            badgeClass = 'sync-badge-saving';
+            break;
+        case 'retrying':
+            text = `⏳ 保存待機中`;
+            badgeClass = 'sync-badge-retrying';
+            break;
+        case 'error':
+            text = `⚠️ 未同期 (次回自動送信)`;
+            badgeClass = 'sync-badge-error';
+            break;
+        default:
+            text = `☁️ 自動保存: 有効`;
+            badgeClass = 'sync-badge-idle';
+            break;
+    }
+
+    if (titleInd) {
+        titleInd.className = `cloud-sync-indicator ${badgeClass}`;
+        titleInd.innerText = text;
+        titleInd.title = `クラウド同期状態: ${text}（リザルト確定時・画面離脱時に自動バックアップ）`;
+    }
+
+    if (modalInd) {
+        modalInd.className = `sync-modal-status ${badgeClass}`;
+        modalInd.innerText = text;
+    }
+}
+
+/**
+ * HTML5 Canvasを用いた引き継ぎIDカード画像の動的生成・自動保存
+ */
+export function generateAndDownloadIdCard() {
+    const userId = String(runtimeState?.currentUserId || (typeof localStorage !== 'undefined' ? localStorage.getItem('sq_user_id') : '') || '--------').trim();
+    if (!userId || userId === '--------') {
+        showAlert("⚠️ ユーザーIDが見つかりません。ゲームを一度プレイしてからお試しください。");
+        return;
+    }
+
+    const canvas = document.createElement('canvas');
+    const width = 640;
+    const height = 400;
+    canvas.width = width * 2;
+    canvas.height = height * 2;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.scale(2, 2);
+
+    // 1. 背景グラデーション (RPG風ディープブルー)
+    const bgGrad = ctx.createLinearGradient(0, 0, width, height);
+    bgGrad.addColorStop(0, '#0a1426');
+    bgGrad.addColorStop(0.4, '#101d36');
+    bgGrad.addColorStop(1, '#050a12');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, width, height);
+
+    // 装飾背景ライン (幾何学模様)
+    ctx.strokeStyle = 'rgba(52, 152, 219, 0.08)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= width; x += 32) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+    }
+    for (let y = 0; y <= height; y += 32) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+    }
+
+    // 2. 外枠ゴールドダブルボーダー
+    ctx.strokeStyle = '#d4af37';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(12, 12, width - 24, height - 24);
+
+    ctx.strokeStyle = 'rgba(241, 196, 15, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(16, 16, width - 32, height - 32);
+
+    // コーナー装飾四角形
+    const cornerSize = 14;
+    const corners = [
+        [12, 12], [width - 12 - cornerSize, 12],
+        [12, height - 12 - cornerSize], [width - 12 - cornerSize, height - 12 - cornerSize]
+    ];
+    ctx.fillStyle = '#f1c40f';
+    corners.forEach(([cx, cy]) => {
+        ctx.fillRect(cx, cy, cornerSize, cornerSize);
+    });
+
+    // 3. ヘッダー部
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillStyle = '#f1c40f';
+    ctx.fillText('⚔️ STUDY QUEST RPG ⚔️', width / 2, 42);
+
+    ctx.font = 'bold 22px sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('引き継ぎIDカード (Data Transfer ID)', width / 2, 70);
+
+    // 4. ID表示ボックス
+    const boxX = 60;
+    const boxY = 92;
+    const boxW = width - 120;
+    const boxH = 76;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+    ctx.fillRect(boxX, boxY, boxW, boxH);
+    ctx.strokeStyle = '#f1c40f';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillStyle = '#bdc3c7';
+    ctx.fillText('▼ あなたの固有引き継ぎID ▼', width / 2, boxY + 22);
+
+    ctx.font = 'bold 34px "BIZ UDPGothic", "Courier New", monospace, sans-serif';
+    ctx.fillStyle = '#2ecc71';
+    ctx.fillText(userId, width / 2, boxY + 58);
+
+    // 5. ステータス情報部（所持XP & 発行日時）
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}/${('0' + (now.getMonth() + 1)).slice(-2)}/${('0' + now.getDate()).slice(-2)} ${('0' + now.getHours()).slice(-2)}:${('0' + now.getMinutes()).slice(-2)}`;
+    const xpStr = (Number(gameState.xp) || 0).toLocaleString() + ' XP';
+
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#f39c12';
+    ctx.fillText(`💎 所持XP: ${xpStr}`, boxX + 10, boxY + boxH + 30);
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#95a5a6';
+    ctx.fillText(`📅 発行日: ${dateStr}`, boxX + boxW - 10, boxY + boxH + 30);
+
+    // 6. 復旧手順ボックス
+    const guideY = boxY + boxH + 46;
+    const guideH = 110;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.fillRect(boxX, guideY, boxW, guideH);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(boxX, guideY, boxW, guideH);
+
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillStyle = '#e67e22';
+    ctx.fillText('【データ復旧手順】', boxX + 16, guideY + 24);
+
+    ctx.font = '12px sans-serif';
+    ctx.fillStyle = '#ecf0f1';
+    ctx.fillText('① ゲームのタイトル画面で「☁️ データ管理」を選択', boxX + 24, guideY + 48);
+    ctx.fillText('② 「データを読み込む」欄に上記の固有IDを入力', boxX + 24, guideY + 70);
+    ctx.fillText('③ 「📥 データをダウンロード」を押すと以前のデータが復元されます', boxX + 24, guideY + 92);
+
+    // 7. 最下部注記
+    ctx.textAlign = 'center';
+    ctx.font = '11px sans-serif';
+    ctx.fillStyle = '#7f8c8d';
+    ctx.fillText('※端末故障・データ初期化・機種変更時の復元に必要です。写真として大切に保存してください。', width / 2, height - 22);
+
+    // ダウンロードトリガー
+    try {
+        const dataUrl = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `STUDY_QUEST_ID_${userId}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        showAlert(`📷 引き継ぎIDカードを保存しました！\n\nファイル名: STUDY_QUEST_ID_${userId}.png\n端末の写真アプリやダウンロードフォルダをご確認ください。`);
+    } catch (e) {
+        console.error('[SQ-IDCard] 画像保存エラー:', e);
+        showAlert("画像の保存に失敗しました。画面のスクリーンショットを撮影してIDを保管してください。");
+    }
+}
+
+if (typeof window !== 'undefined') {
+    window.generateAndDownloadIdCard = generateAndDownloadIdCard;
+    window.updateCloudSyncIndicator = updateCloudSyncIndicator;
+}
+
 
 export function openVersionHistory() { 
     closeAllCategoryModals();

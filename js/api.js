@@ -2,8 +2,8 @@
 // js/api.js (GASバックエンド通信・クラウド同期)
 // ==========================================
 
-import { API_URL, rawData, gameState, dailyMissions, runtimeState, saveGame } from './state.js?v=10.1.4';
-import { isGradeMatch, ALL_GRADES } from './utils.js?v=10.1.4';
+import { API_URL, rawData, gameState, dailyMissions, runtimeState, saveGame } from './state.js?v=10.1.5';
+import { isGradeMatch, ALL_GRADES } from './utils.js?v=10.1.5';
 
 // ==========================================
 // IndexedDB スマートキャッシュマネージャー
@@ -244,37 +244,293 @@ if (typeof window !== 'undefined') {
     window.forceSyncAllGrades = forceSyncAllGrades;
 }
 
+// ==========================================
+// 強制クラウドセーブ＆ID自動保全システム (CloudSyncQueue)
+// ==========================================
+
+/**
+ * クラウドセーブ用送信ペイロードの生成ヘルパー
+ * （要件定義書 5. データモデルに準拠）
+ */
+export function createSavePayload() {
+    const rawUserId = runtimeState?.currentUserId || (typeof localStorage !== 'undefined' ? localStorage.getItem('sq_user_id') : '') || '';
+    return {
+        action: 'save',
+        userId: String(rawUserId).trim(),
+        data: {
+            xp: Number(gameState.xp) || 0,
+            equipped: String(gameState.equipped || '1'),
+            itemLevels: gameState.itemLevels || {},
+            charaInventory: gameState.charaInventory || {},
+            teamParty: Array.isArray(gameState.teamParty) ? gameState.teamParty : [null, null, null],
+            missions: dailyMissions || {},
+            stats: gameState.stats || {},
+            subjectStats: gameState.subjectStats || {},
+            unlockedTitles: Array.isArray(gameState.unlockedTitles) ? gameState.unlockedTitles : [],
+            claimedGifts: Array.isArray(gameState.claimedGifts) ? gameState.claimedGifts : [],
+            revengeList: Array.isArray(gameState.revengeList) ? gameState.revengeList : [],
+            unitProgress: gameState.unitProgress || {},
+            inventory: gameState.inventory || {},
+            calcRecords: gameState.calcRecords || {},
+            studyel: gameState.studyel || {}
+        }
+    };
+}
+
+/**
+ * クラウド送信直前のデータ保護セーフガード検証
+ * （空データや未ロード状態によるクラウド上書き破壊を物理遮断）
+ */
+export function validateSaveData(payload) {
+    if (!payload || typeof payload !== 'object') return false;
+    if (!payload.userId) return false;
+    const d = payload.data;
+    if (!d || typeof d !== 'object') return false;
+
+    // 【最優先・絶対厳守安全ガード】
+    // charaInventory が未初期化、オブジェクトでない、またはキーが空の場合はクラウド上書きを物理遮断
+    if (!d.charaInventory || typeof d.charaInventory !== 'object' || Object.keys(d.charaInventory).length === 0) {
+        console.warn('[SQ-CloudSyncGuard] クラウドセーブ遮断: charaInventory が空または未初期化のため送信を中止しました。');
+        return false;
+    }
+    return true;
+}
+
+/**
+ * 非同期キュー管理クラス (CloudSyncQueue)
+ * ・楽観的UI（即時画面ロック解除、スピナーなし）
+ * ・重複要求の最新統合（Coalesce）
+ * ・指数バックオフ + フルジッター（最大5回リトライ）
+ * ・画面離脱時の fetch(..., { keepalive: true }) 保証
+ */
+export class CloudSyncQueue {
+    constructor() {
+        this.baseDelay = 2000;       // 基本ディレイ 2000ms (2秒)
+        this.maxRetries = 5;         // 最大リトライ回数 5回
+        this.timeoutMs = 15000;      // 通常送信タイムアウト 15秒
+
+        this.isSending = false;      // 通信実行中フラグ
+        this.hasPendingRequest = false; // 通信中の新規リクエスト保留フラグ
+        this.retryCount = 0;         // 現在のリトライ試行回数
+        this.retryTimer = null;      // リトライ待機タイマー
+
+        this.status = 'idle';        // 'idle' | 'saving' | 'retrying' | 'synced' | 'error'
+        this.lastSyncTime = null;    // 最後の正常同期日時 (Date)
+        this.listeners = [];         // 状態購読リスナー
+
+        this.initExitListeners();
+    }
+
+    /**
+     * 画面離脱時（pagehide / visibilitychange hidden）の自動送信保証
+     */
+    initExitListeners() {
+        if (typeof window === 'undefined') return;
+
+        const handleExit = () => {
+            // 保留中リクエストまたは進行中の変更がある場合、離脱時に即座に送信
+            if (this.hasPendingRequest || this.isSending || this.retryTimer) {
+                this.sendBeaconSync();
+            }
+        };
+
+        window.addEventListener('pagehide', handleExit);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                handleExit();
+            }
+        });
+    }
+
+    /**
+     * 同期状態リスナーの登録
+     */
+    subscribe(listener) {
+        if (typeof listener === 'function') {
+            this.listeners.push(listener);
+            listener(this.status, this.getFormattedSyncTime());
+        }
+    }
+
+    /**
+     * 状態通知ヘルパー
+     */
+    notifyStatus(status) {
+        this.status = status;
+        const timeStr = this.getFormattedSyncTime();
+        this.listeners.forEach(fn => {
+            try { fn(status, timeStr); } catch (e) { console.error('[SQ-CloudSync] リスナー実行エラー:', e); }
+        });
+    }
+
+    getFormattedSyncTime() {
+        if (!this.lastSyncTime) return '';
+        const h = ('0' + this.lastSyncTime.getHours()).slice(-2);
+        const m = ('0' + this.lastSyncTime.getMinutes()).slice(-2);
+        return `${h}:${m}`;
+    }
+
+    /**
+     * 強制セーブ要求受付（リザルト確定時・クエスト終了時など）
+     * 楽観的UI: 画面を一切ロックせず即座にバックグラウンド実行
+     */
+    requestSync() {
+        this.hasPendingRequest = true;
+
+        // リトライ待機中の場合は最新リクエストとして統合し、待機タイマーを解除して即時送信へ
+        if (this.retryTimer) {
+            clearTimeout(this.retryTimer);
+            this.retryTimer = null;
+        }
+
+        // すでに通信中の場合は完了後に最新統合で送信されるため早期リターン
+        if (this.isSending) {
+            return;
+        }
+
+        this.processNext();
+    }
+
+    /**
+     * キュー処理ループ
+     */
+    async processNext() {
+        if (this.isSending) return;
+        if (!this.hasPendingRequest) return;
+
+        const payload = createSavePayload();
+
+        // データ保護セーフガード検証
+        if (!validateSaveData(payload)) {
+            this.hasPendingRequest = false;
+            this.notifyStatus('error');
+            return;
+        }
+
+        this.isSending = true;
+        this.hasPendingRequest = false;
+        this.notifyStatus('saving');
+
+        const success = await this.sendPayload(payload);
+        this.isSending = false;
+
+        if (success) {
+            this.retryCount = 0;
+            this.lastSyncTime = new Date();
+            this.notifyStatus('synced');
+
+            // 送信中に新たなリクエストが届いていた場合は最新統合で即座に送信
+            if (this.hasPendingRequest) {
+                this.processNext();
+            }
+        } else {
+            // 通信失敗: 保留状態に戻す
+            this.hasPendingRequest = true;
+            if (this.retryCount < this.maxRetries) {
+                // 指数バックオフ + フルジッター (Full Jitter)
+                // WaitTime = random(0, BaseDelay * 2^RetryCount)
+                const maxWait = this.baseDelay * Math.pow(2, this.retryCount);
+                const waitTime = Math.floor(Math.random() * maxWait);
+                this.retryCount++;
+                console.warn(`[SQ-CloudSync] 保存失敗。リトライ ${this.retryCount}/${this.maxRetries} (${waitTime}ms後に再試行)`);
+                this.notifyStatus('retrying');
+
+                this.retryTimer = setTimeout(() => {
+                    this.retryTimer = null;
+                    this.processNext();
+                }, waitTime);
+            } else {
+                // 5回連続失敗時は打ち切り（localStorage は安全に維持）
+                console.error('[SQ-CloudSync] 最大リトライ回数(5回)を超過しました。次回トリガー時に再開します。');
+                this.retryCount = 0;
+                this.notifyStatus('error');
+            }
+        }
+    }
+
+    /**
+     * 通常送信（AbortController 15秒タイムアウト, Content-Type: text/plain で CORS Preflight 抑制）
+     */
+    async sendPayload(payload) {
+        const controller = new AbortController();
+        const timerId = setTimeout(() => controller.abort(), this.timeoutMs);
+
+        try {
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify(payload),
+                signal: controller.signal
+            });
+            clearTimeout(timerId);
+
+            if (!res.ok) {
+                console.warn(`[SQ-CloudSync] HTTPエラー: ${res.status}`);
+                return false;
+            }
+
+            const json = await res.json();
+            return json && json.status === 'success';
+        } catch (e) {
+            clearTimeout(timerId);
+            console.warn('[SQ-CloudSync] 通信例外:', e.message || e);
+            return false;
+        }
+    }
+
+    /**
+     * 画面離脱時保証（fetch keepalive: true）
+     */
+    sendBeaconSync() {
+        const payload = createSavePayload();
+        if (!validateSaveData(payload)) return;
+
+        try {
+            if (typeof fetch === 'function') {
+                fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(payload),
+                    keepalive: true
+                }).catch(() => {});
+            }
+        } catch (e) {
+            console.warn('[SQ-CloudSync] 離脱時送信例外:', e);
+        }
+    }
+}
+
+// シングルトンインスタンスのエクスポート
+export const cloudSync = new CloudSyncQueue();
+if (typeof window !== 'undefined') {
+    window.cloudSync = cloudSync;
+}
+
 export async function uploadData() {
     if (typeof window.showConfirm === 'function') {
         if (!(await window.showConfirm("現在のデータをクラウドに保存しますか？\n（同じIDの古いデータは上書きされます）"))) return;
     }
     saveGame();
-    const backupData = {
-        xp: gameState.xp,
-        equipped: gameState.equipped,
-        itemLevels: gameState.itemLevels,
-        charaInventory: gameState.charaInventory,
-        missions: dailyMissions,
-        stats: gameState.stats,
-        subjectStats: gameState.subjectStats,
-        unlockedTitles: gameState.unlockedTitles,
-        claimedGifts: gameState.claimedGifts,
-        revengeList: gameState.revengeList,
-        unitProgress: gameState.unitProgress,
-        inventory: gameState.inventory,
-        calcRecords: gameState.calcRecords,
-        studyel: gameState.studyel
-    };
-    const btn = document.querySelector('#sync-overlay button');
+    const payload = createSavePayload();
+
+    if (!validateSaveData(payload)) {
+        alert("【エラー】セーブデータの安全確認に失敗したため、クラウド保存を中止しました。");
+        return;
+    }
+
+    const btn = document.querySelector('#sync-overlay button.btn-save-action') || document.querySelector('#sync-overlay button');
     const originalText = btn ? btn.innerText : "送信";
     if (btn) { btn.innerText = "送信中..."; btn.disabled = true; }
     try {
         const res = await fetch(API_URL, {
             method: 'POST',
-            body: JSON.stringify({ action: 'save', userId: runtimeState.currentUserId, data: backupData })
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(payload)
         });
         const json = await res.json();
         if (json.status === 'success') {
+            cloudSync.lastSyncTime = new Date();
+            cloudSync.notifyStatus('synced');
             alert("クラウドへの保存が完了しました！");
         } else {
             alert("保存失敗: " + json.message);
