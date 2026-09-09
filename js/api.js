@@ -1064,9 +1064,31 @@ export async function fetchData() {
         const isDebug = window.location.search.includes('debug=true');
         // 初回起動時は共通マスター（キャラ・ボス・ショップ等）のみを高速取得
         const url = isDebug ? ('http://localhost:8000/sample_api.json?action=master&t=' + Date.now()) : (API_URL + '?action=master&t=' + Date.now());
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP通信エラー: ${res.status}`);
-        const data = await res.json();
+        
+        let data = null;
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP通信エラー: ${res.status}`);
+            data = await res.json();
+            // オンライン取得成功時にマスターデータを安全にローカルキャッシュ（オフライン起動保証）
+            try {
+                localStorage.setItem('sq_master_cache', JSON.stringify(data));
+            } catch (storeErr) {
+                console.warn('[SQ-Data] マスターキャッシュ保存スキップ:', storeErr);
+            }
+        } catch (fetchErr) {
+            console.warn('[SQ-Data] マスターデータ取得失敗（オフラインの可能性）:', fetchErr.message);
+            // オフライン時のフォールバック: 前回のマスターキャッシュを展開
+            const cachedMasterRaw = localStorage.getItem('sq_master_cache');
+            if (cachedMasterRaw) {
+                try {
+                    data = JSON.parse(cachedMasterRaw);
+                    console.log('[SQ-Data] オフライン用マスターキャッシュを展開しました。');
+                } catch (parseErr) {}
+            }
+            // キャッシュすら存在しない初回オフライン時のみ本来のエラーを投げる
+            if (!data) throw fetchErr;
+        }
 
         // マスターの更新日時・バージョンを保存（IndexedDBキャッシュの有効性判定に使用）
         rawData.masterUpdatedAt = String(data.updatedAt || data.version || '');
