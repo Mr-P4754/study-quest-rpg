@@ -724,8 +724,23 @@ export function closeReliefMenu() {
 
 export function openSyncMenu() {
     closeAllCategoryModals();
+    
+    // 【フェイルセーフ】ユーザーIDの確実な解決
+    if (!runtimeState.currentUserId && typeof localStorage !== 'undefined') {
+        const storedId = localStorage.getItem('sq_user_id');
+        if (storedId) {
+            runtimeState.currentUserId = storedId;
+        } else {
+            const newId = Math.random().toString(36).substring(2, 10);
+            localStorage.setItem('sq_user_id', newId);
+            runtimeState.currentUserId = newId;
+        }
+    }
+    
+    const validId = runtimeState.currentUserId || (typeof localStorage !== 'undefined' ? localStorage.getItem('sq_user_id') : '') || '--------';
     const idEl = document.getElementById('my-user-id');
-    if (idEl) idEl.innerText = runtimeState.currentUserId || '--------';
+    if (idEl) idEl.innerText = validId;
+
     if (cloudSync) {
         updateCloudSyncIndicator(cloudSync.status, cloudSync.getFormattedSyncTime());
     }

@@ -32,9 +32,9 @@ import {
     loadSaveData,
     saveGame,
     getDefaultStudyelState
-} from './state.js?v=10.1.5b';
+} from './state.js?v=10.1.5';
 
-import * as StudyelEngine from './studyel-engine.js?v=10.1.5b';
+import * as StudyelEngine from './studyel-engine.js?v=10.1.5';
 window.StudyelEngine = StudyelEngine;
 
 import {
@@ -51,14 +51,14 @@ import {
     stopBGM,
     playMmlBGM,
     BGM_MML
-} from './utils.js?v=10.1.5b';
+} from './utils.js?v=10.1.5';
 
 import {
     uploadData,
     downloadData,
     fetchData,
     cloudSync
-} from './api.js?v=10.1.5b';
+} from './api.js?v=10.1.5';
 
 import {
     showCutIn,
@@ -73,7 +73,7 @@ import {
     finishGame,
     handleResultClose,
     backToTitle
-} from './battle-core.js?v=10.1.5b';
+} from './battle-core.js?v=10.1.5';
 
 import {
     startNormalGameCheck,
@@ -108,7 +108,7 @@ import {
     toggleRelief,
     startOathGame,
     startReliefGame
-} from './quest-normal.js?v=10.1.5b';
+} from './quest-normal.js?v=10.1.5';
 
 import {
     addRogueLog,
@@ -131,7 +131,7 @@ import {
     updateRogueUI,
     escapeRogueConfirm,
     exitRogueSystem
-} from './quest-explore.js?v=10.1.5b';
+} from './quest-explore.js?v=10.1.5';
 
 import {
     openGacha,
@@ -179,7 +179,7 @@ import {
     checkLoginBonus,
     closeLoginBonus,
     checkMissionDate
-} from './gacha-shop.js?v=10.1.5b';
+} from './gacha-shop.js?v=10.1.5';
 
 import {
     initTitle,
@@ -231,7 +231,7 @@ import {
     GuideModule,
     generateAndDownloadIdCard,
     updateCloudSyncIndicator
-} from './ui-manager.js?v=10.1.5b';
+} from './ui-manager.js?v=10.1.5';
 
 import {
     openTeamBattleSetup,
@@ -282,7 +282,7 @@ import {
     stopTbQrScanner,
     setScannedData,
     clearScannedData
-} from './special-quest-engine.js?v=10.1.5b';
+} from './special-quest-engine.js?v=10.1.5';
 
 // ==========================================
 // インライン onclick / 動的UI互換用 window 一括バインド

@@ -439,10 +439,13 @@ export function restoreCharacters() {
     }
 
     targetFormIds.forEach(id => {
+        if (!id || typeof id !== 'string') return;
         // 例: studyel_science_gen1
         const parts = id.split('_');
-        const formKey = (parts.length >= 2) ? parts[1] : 'general';
-        const formInfo = ADULT_FORMS[formKey] || ADULT_FORMS.general;
+        const formKey = (parts && parts.length >= 2) ? parts[1] : 'general';
+        const formInfo = ADULT_FORMS[formKey] || ADULT_FORMS.general || {
+            id: 'general', name: '機技のスタディエル', type: 'TIME', skills: ['TIME'], cost: 6, color: '#3498db', desc: ''
+        };
         const genMatch = id.match(/gen(\d+)/);
         const genNum = genMatch ? genMatch[1] : '1';
 
@@ -453,15 +456,15 @@ export function restoreCharacters() {
                 id: id,
                 name: (st.finalStats && st.finalStats.formId === id && st.finalStats.name)
                     ? st.finalStats.name
-                    : `${formInfo.name} (第${genNum}代)`,
+                    : `${formInfo.name || 'スタディエル'} (第${genNum}代)`,
                 rarity: 'UR',
-                type: formInfo.type,
-                value: (st.finalStats && st.finalStats.formId === id) ? st.finalStats.baseValue : 1.50,
-                desc: formInfo.desc,
+                type: formInfo.type || 'TIME',
+                value: (st.finalStats && st.finalStats.formId === id) ? (st.finalStats.baseValue || 1.50) : 1.50,
+                desc: formInfo.desc || '',
                 imageUrl: getStudyelSvgDataUri(4, formKey),
                 isStudyel: true,
-                bonusTime: (st.finalStats && st.finalStats.formId === id) ? st.finalStats.bonusTime : 0.0,
-                bonusDamage: (st.finalStats && st.finalStats.formId === id) ? st.finalStats.bonusDamage : 0.0
+                bonusTime: (st.finalStats && st.finalStats.formId === id) ? (st.finalStats.bonusTime || 0.0) : 0.0,
+                bonusDamage: (st.finalStats && st.finalStats.formId === id) ? (st.finalStats.bonusDamage || 0.0) : 0.0
             };
             rawData.characters.push(cMaster);
         } else {
@@ -472,6 +475,8 @@ export function restoreCharacters() {
             }
         }
 
+        const defaultSkills = (formInfo && Array.isArray(formInfo.skills) && formInfo.skills.length > 0) ? [...formInfo.skills] : ['TIME'];
+
         // 2. gameState.charaInventory に無ければ登録
         if (!gameState.charaInventory[id]) {
             gameState.charaInventory[id] = {
@@ -479,15 +484,15 @@ export function restoreCharacters() {
                 count: 1,
                 exp: 0,
                 currentRarity: 'UR',
-                skills: [...formInfo.skills],
-                customValue: (st.finalStats && st.finalStats.formId === id) ? st.finalStats.baseValue : 1.50,
+                skills: defaultSkills,
+                customValue: (st.finalStats && st.finalStats.formId === id) ? (st.finalStats.baseValue || 1.50) : 1.50,
                 isEvolved: true,
                 isStudyel: true
             };
         } else {
             gameState.charaInventory[id].isStudyel = true;
-            if (!gameState.charaInventory[id].skills || gameState.charaInventory[id].skills.length === 0) {
-                gameState.charaInventory[id].skills = [...formInfo.skills];
+            if (!Array.isArray(gameState.charaInventory[id].skills) || gameState.charaInventory[id].skills.length === 0) {
+                gameState.charaInventory[id].skills = defaultSkills;
             }
         }
     });

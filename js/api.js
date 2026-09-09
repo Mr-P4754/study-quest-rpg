@@ -545,9 +545,15 @@ export async function uploadData() {
 export async function downloadData() {
     const inputId = document.getElementById('input-sync-id')?.value.trim();
     if (!inputId) return alert("IDを入力してください");
+
+    let confirmed = false;
     if (typeof window.showConfirm === 'function') {
-        if (!(await window.showConfirm("データを読み込みますか？\n現在のデータは上書きされます。"))) return;
+        confirmed = await window.showConfirm(`ID: 【${inputId}】 のデータを読み込みますか？\n現在の端末データは上書きされます。`);
+    } else {
+        confirmed = window.confirm(`ID: 【${inputId}】 のデータを読み込みますか？\n現在の端末データは上書きされます。`);
     }
+    if (!confirmed) return;
+
     const btns = document.querySelectorAll('#sync-overlay button');
     let btn = null;
     for (let i = 0; i < btns.length; i++) {
@@ -556,26 +562,54 @@ export async function downloadData() {
     if (!btn && btns.length > 0) btn = btns[btns.length - 2]; 
     const originalText = btn ? btn.innerText : "ダウンロード";
     if (btn) { btn.innerText = "受信中..."; btn.disabled = true; }
+
     try {
+        console.log(`[SQ-Sync] データ受信リクエスト送信: ID=${inputId}`);
         const res = await fetch(API_URL, {
             method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify({ action: 'load', userId: inputId })
         });
         const json = await res.json();
-        if (json.questions || json.appVersion) return alert("【エラー】\nサーバー設定が反映されていません。");
+        console.log('[SQ-Sync] 受信レスポンス:', json);
+
+        if (json.questions || json.appVersion) {
+            alert("【エラー】\nサーバー設定が反映されていません。GASのデプロイ状態をご確認ください。");
+            return;
+        }
+
         if (json.status === 'success') {
             let data = json.data;
-            if (typeof data === 'string') {
-                try { data = JSON.parse(data); } catch(e) {}
+            while (typeof data === 'string') {
+                try {
+                    data = JSON.parse(data);
+                } catch (e) {
+                    break;
+                }
             }
-            if (!data) { alert("データの中身が空でした。"); return; }
-            const forceObj = (v) => { if(!v)return{}; if(typeof v==='string'){try{return JSON.parse(v)}catch(e){return{}}} return v; };
-            const forceArr = (v) => { if(!v)return[]; if(typeof v==='string'){try{return JSON.parse(v)}catch(e){return[]}} return Array.isArray(v)?v:[]; };
-            
+
+            if (!data || typeof data !== 'object') {
+                alert(`ID: 【${inputId}】 のセーブデータが空でした。`);
+                return;
+            }
+
+            const forceObj = (v) => {
+                if (!v) return {};
+                if (typeof v === 'string') { try { return JSON.parse(v); } catch(e) { return {}; } }
+                return typeof v === 'object' ? v : {};
+            };
+            const forceArr = (v) => {
+                if (!v) return [];
+                if (typeof v === 'string') { try { return JSON.parse(v); } catch(e) { return []; } }
+                return Array.isArray(v) ? v : [];
+            };
+
             gameState.xp = parseInt(data.xp || 0, 10);
             gameState.equipped = String(data.equipped || '1');
             gameState.itemLevels = forceObj(data.itemLevels);
             gameState.charaInventory = forceObj(data.charaInventory);
+
+            // インベントリの最低レベル・個数補正
             Object.keys(gameState.charaInventory).forEach(id => {
                 const item = gameState.charaInventory[id];
                 if (item) {
@@ -584,7 +618,12 @@ export async function downloadData() {
                     if (typeof item.exp !== 'number' || item.exp < 0) item.exp = 0;
                 }
             });
-            
+
+            // チームバトルパーティー復元
+            if (Array.isArray(data.teamParty) && data.teamParty.length === 3) {
+                gameState.teamParty = data.teamParty;
+            }
+
             const m = forceObj(data.missions);
             dailyMissions.date = m.date || "";
             dailyMissions.progress = m.progress || dailyMissions.progress;
@@ -597,6 +636,7 @@ export async function downloadData() {
             gameState.revengeList = forceArr(data.revengeList);
             gameState.unitProgress = forceObj(data.unitProgress);
             gameState.calcRecords = forceObj(data.calcRecords);
+
             const cInv = forceObj(data.inventory);
             gameState.inventory = {
                 redPages: Number(cInv.redPages) || 0,
@@ -605,20 +645,27 @@ export async function downloadData() {
                 xpBookMedium: Number(cInv.xpBookMedium) || 0,
                 xpBookLarge: Number(cInv.xpBookLarge) || 0
             };
+
             if (data.studyel) {
                 const sData = forceObj(data.studyel);
                 Object.assign(gameState.studyel, sData);
             }
+
+            // ユーザーIDの確実な保存
             runtimeState.currentUserId = inputId;
             localStorage.setItem('sq_user_id', inputId);
+
+            // セーブ実行（安全ガード通過＆二重バックアップ退避）
             saveGame();
-            alert("データの読み込みに成功しました！\nリロードします。");
+
+            alert(`🎉 ID: 【${inputId}】 のデータ読み込みに成功しました！\n（XP: ${gameState.xp.toLocaleString()}）\n画面を再読み込みします。`);
             location.reload();
         } else {
-            alert("読み込み失敗: " + (json.message || "Unknown error"));
+            alert(`読み込み失敗: ${json.message || "指定されたIDのデータが見つかりませんでした。"}`);
         }
-    } catch(e) {
-        alert("通信エラー: " + e);
+    } catch (e) {
+        console.error('[SQ-Sync] ダウンロード通信エラー:', e);
+        alert("通信エラーが発生しました: " + (e.message || e));
     } finally {
         if (btn) { btn.innerText = originalText; btn.disabled = false; }
     }
