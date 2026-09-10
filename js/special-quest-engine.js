@@ -5,11 +5,11 @@
  * ==========================================
  */
 
-import { gameState, rawData, saveGame, runtimeState, RARITY_CAPS, LV_BONUS_RATE } from './state.js?v=10.2.4';
-import { getDisplayName, playSE, playBGM, stopBGM, updateMuteButtonsUI, ALL_GRADES, isGradeMatch, renderSafeImg } from './utils.js?v=10.2.4';
-import { closeAllCategoryModals, returnToCurrentCategory, showAlert, showConfirm } from './ui-manager.js?v=10.2.4';
-import { cloudSync } from './api.js?v=10.2.4';
-import { AVATAR_PARTS_DEF, AVATAR_MESSAGES, generateAvatarSvg } from './avatar-engine.js?v=10.2.4';
+import { gameState, rawData, saveGame, runtimeState, RARITY_CAPS, LV_BONUS_RATE } from './state.js?v=10.2.5';
+import { getDisplayName, playSE, playBGM, stopBGM, updateMuteButtonsUI, ALL_GRADES, isGradeMatch, renderSafeImg } from './utils.js?v=10.2.5';
+import { closeAllCategoryModals, returnToCurrentCategory, showAlert, showConfirm } from './ui-manager.js?v=10.2.5';
+import { cloudSync } from './api.js?v=10.2.5';
+import { AVATAR_PARTS_DEF, AVATAR_MESSAGES, generateAvatarSvg } from './avatar-engine.js?v=10.2.5';
 
 // ----------------------------------------------------
 // 内部状態管理 & コスト定義

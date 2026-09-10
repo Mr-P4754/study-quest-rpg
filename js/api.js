@@ -2,8 +2,8 @@
 // js/api.js (GASバックエンド通信・クラウド同期)
 // ==========================================
 
-import { API_URL, rawData, gameState, dailyMissions, runtimeState, saveGame } from './state.js?v=10.2.4';
-import { isGradeMatch, ALL_GRADES } from './utils.js?v=10.2.4';
+import { API_URL, rawData, gameState, dailyMissions, runtimeState, saveGame } from './state.js?v=10.2.5';
+import { isGradeMatch, ALL_GRADES } from './utils.js?v=10.2.5';
 
 // ==========================================
 // IndexedDB スマートキャッシュマネージャー

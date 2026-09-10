@@ -10,31 +10,31 @@ import {
     runtimeState,
     ROGUE_TILES,
     saveGame
-} from './state.js?v=10.2.4';
+} from './state.js?v=10.2.5';
 
 import {
     playSE,
     playBGM,
     isGradeMatch,
     renderSafeImg
-} from './utils.js?v=10.2.4';
+} from './utils.js?v=10.2.5';
 
 import {
     updateUI,
     startCountdown,
     getCharaStats,
     backToTitle
-} from './battle-core.js?v=10.2.4';
+} from './battle-core.js?v=10.2.5';
 
 import {
     showAppModal,
     showConfirm,
     updateTitleInfo
-} from './ui-manager.js?v=10.2.4';
+} from './ui-manager.js?v=10.2.5';
 
-import { cloudSync } from './api.js?v=10.2.4';
-import { generateAvatarSvg } from './avatar-engine.js?v=10.2.4';
-import { getStudyelSvgDataUri } from './studyel-engine.js?v=10.2.4';
+import { cloudSync } from './api.js?v=10.2.5';
+import { generateAvatarSvg } from './avatar-engine.js?v=10.2.5';
+import { getStudyelSvgDataUri } from './studyel-engine.js?v=10.2.5';
 
 // --- フィールド幾何・ゲームバランス定数 ---
 const MAP_SIZE = 1200;
@@ -46,10 +46,10 @@ const CORRIDOR_WIDTH_MIN = 100;
 const CORRIDOR_WIDTH_MAX = 160;
 
 const PLAYER_RADIUS = 20;
-const PLAYER_SPEED = 2.8;
+const PLAYER_SPEED = 1.6; // 従来の2.8から約43%減速（敵を簡単に回避できない落ち着いた探索速度）
 const ENEMY_RADIUS = 20;
-const ENEMY_WANDER_SPEED = 0.8;
-const ENEMY_CHASE_SPEED = 1.5;
+const ENEMY_WANDER_SPEED = 0.7;
+const ENEMY_CHASE_SPEED = 1.4; // プレイヤー速度1.6に対して肉薄する追尾速度
 const ENEMY_SEARCH_RADIUS = 160;
 const COLLISION_DISTANCE = 40;
 const STEP_DISTANCE = 32;

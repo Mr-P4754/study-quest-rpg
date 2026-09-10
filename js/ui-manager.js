@@ -9,7 +9,7 @@ import {
     runtimeState,
     GUIDE_DATA,
     saveGame
-} from './state.js?v=10.2.4';
+} from './state.js?v=10.2.5';
 
 import {
     getDisplayName,
@@ -18,10 +18,10 @@ import {
     ALL_GRADES,
     isGradeMatch,
     renderSafeImg
-} from './utils.js?v=10.2.4';
+} from './utils.js?v=10.2.5';
 
-import { cloudSync } from './api.js?v=10.2.4';
-import { generateAvatarSvg } from './avatar-engine.js?v=10.2.4';
+import { cloudSync } from './api.js?v=10.2.5';
+import { generateAvatarSvg } from './avatar-engine.js?v=10.2.5';
 
 const SUBJECT_ORDER = [
     '国語', '算数', '数学', '理科', '社会', '英語', '情報',
