@@ -177,24 +177,31 @@ export const GUIDE_DATA = {
         },
         'rogue': {
             categoryId: 'special',
-            title: '探索クエスト（ローグライク）',
+            title: '探索クエスト（オープンワールド）',
             icon: '🧭',
-            summary: 'ダンジョンを探索して大量のXPと限定アイテムを獲得！',
+            summary: 'オトモと一緒に広大なフィールドを探索！直線コリドーと寄り道で大量XP獲得！',
             contentHtml: `
                 <h4>① 操作手順</h4>
-                <p>1. スペシャルクエスト画面から<b>「🧭 探索クエスト」</b>を選択します。<br>
-                2. 学年を選択して探索を開始します。<br>
-                3. 画面の移動ボタンまたはキーボード（矢印キー/WASD）でプレイヤーを進めます。</p>
+                <p>1. スペシャルクエスト画面から<b>「🧭 探索」</b>を選択し、学年を選んで出撃します。<br>
+                2. <b>操作方法</b>: 画面左下の<b>バーチャルジョイスティック</b>、またはPCの<b>WASD / 矢印キー</b>、画面直接タップで滑らかに移動できます。<br>
+                3. 現在装備しているキャラクターが<b>「オトモ」</b>として一緒に連れ歩き、固有の探索支援スキルを発揮します！</p>
 
-                <h4>② ダンジョンの歩き方とイベント</h4>
-                <p>・未踏破マスを踏むとモンスター出現や各種イベントが発生します。<br>
-                ・<b>🚪（階段）</b>: 階層ボスと戦闘し、次のフロアへ進みます。<br>
-                ・<b>⛲（癒しの泉）</b>: ライフが1回復します。<br>
-                ・<b>📜（古文書）</b>: 探索レベルがアップし、探索が有利になります。<br>
-                ・<b>🛍️（ショップ）</b>: 獲得した一時XPを消費して歩数（韋駄天の靴）を購入できます。</p>
+                <h4>② オトモの属性パッシブ効果</h4>
+                <p>・<b>🔥 ATK (炎)</b>: モンスター接触時に敵HPを 15% 先制攻撃！<br>
+                ・<b>💧 TIME (水)</b>: 各階層の最大歩数が常時 +10歩（初期50歩 ➔ 60歩）！<br>
+                ・<b>⚡ EXP (雷)</b>: 宝箱の獲得報酬（XP・素材）が2倍、中間ショップ全品20%OFF！<br>
+                ・<b>✨ ALL (万能)</b>: 全効果の複合 ＋ ゲート方角の常時感知（足元コンパス）！</p>
 
-                <h4>③ 歩数制限</h4>
-                <p>各階層には歩数上限があります。歩数が0になると<b>拠点へ強制送還</b>されるため、ショップでの歩数回復や最短ルートの開拓が重要です。</p>
+                <h4>③ フィールド構造と探索のコツ</h4>
+                <p>・<b>🚪（ボス扉）</b>: スタート地点から直線距離480pxの位置に配置。触れると階層ボスとの決戦になります。<br>
+                ・<b>👾（モンスター）</b>: スタート〜ゴールを結ぶ最短直線帯（コリドー）に密集！避けて大回りするか、倒して突き進むかの判断が重要です。<br>
+                ・<b>🎁（宝箱）</b>: 寄り道エリアに配置。一時XPや強化素材を獲得できます。<br>
+                ・<b>⛲（癒しの泉）</b>: 減ったライフが1回復します（ライフ満タン時は温存可能）。<br>
+                ・<b>📜（古代の石碑）</b>: 触れるとステータス変化（攻撃力や探索Lvの増減）が発生します。<br>
+                ・<b>🛍️（商人）</b>: 獲得した一時XPで強化薬や歩数を購入できます（利用後消滅）。</p>
+
+                <h4>④ 歩数スタミナ制限</h4>
+                <p>ヘッダーのスタミナゲージは、32px移動ごとに1歩消費されます。歩数が0になると<b>拠点へ強制送還</b>されるため、残り歩数と相談しながらゴールを目指しましょう。</p>
             `
         },
         'survival': {
@@ -458,7 +465,18 @@ export const gameState = {
         xpBookLarge: 0
     },
     calcRecords: {},
-    studyel: getDefaultStudyelState()
+    studyel: getDefaultStudyelState(),
+    avatar: {
+        base: 0,
+        skinColor: "#fcd34d",
+        eyes: 0,
+        mouth: 0,
+        hair: 0,
+        hairColor: "#1e293b",
+        outfit: 0,
+        accessory: 0,
+        msgId: 0
+    }
 };
 
 /**
@@ -503,12 +521,11 @@ export const dailyMissions = {
 export const rogueData = {
     floor: 1,
     steps: 0,
-    maxSteps: 30,
-    playerX: 0,
-    playerY: 0,
-    map: [],
-    mapWidth: 11,
-    mapHeight: 11,
+    maxSteps: 50,
+    playerX: 600,
+    playerY: 600,
+    mapWidth: 1200,
+    mapHeight: 1200,
     earnedXp: 0,
     exploreLevel: 1,
     atkBuff: 1.0,
@@ -518,7 +535,18 @@ export const rogueData = {
     isAnimating: false,
     shopBought: false,
     maxLives: 3,
-    isBossBattle: false
+    isBossBattle: false,
+    // オープンワールド用拡張プロパティ
+    enemies: [],
+    objects: [],
+    startPos: { x: 600, y: 600 },
+    goalPos: { x: 600, y: 120 },
+    accumulatedDist: 0,
+    invincibleUntil: 0,
+    playerHistory: [],
+    lastEncounterEnemyId: null,
+    currentShopEntity: null,
+    isPaused: false
 };
 
 // Runtime UI / Game Flags
@@ -708,6 +736,14 @@ export function loadSaveData() {
         gameState.studyel = getDefaultStudyelState();
     }
 
+    // アバター設定データのロード
+    const loadedAvatar = safeParse('sq_avatar', null);
+    if (loadedAvatar && typeof loadedAvatar === 'object') {
+        gameState.avatar = Object.assign({
+            base: 0, skinColor: "#fcd34d", eyes: 0, mouth: 0, hair: 0, hairColor: "#1e293b", outfit: 0, accessory: 0, msgId: 0
+        }, loadedAvatar);
+    }
+
     if (typeof window !== 'undefined' && typeof window.StudyelEngine?.restoreCharacters === 'function') {
         window.StudyelEngine.restoreCharacters();
     }
@@ -737,6 +773,7 @@ export function saveGame() {
     localStorage.setItem('sq_calc_records', JSON.stringify(gameState.calcRecords || {}));
     localStorage.setItem('sq_item_inventory', JSON.stringify(gameState.inventory));
     localStorage.setItem('sq_studyel', JSON.stringify(gameState.studyel));
+    localStorage.setItem('sq_avatar', JSON.stringify(gameState.avatar));
 
     // 【自動バックアップ二重保存】万一の破損時に備え、正常なセーブデータのスナップショットを別キーへ退避保存
     try {
@@ -752,7 +789,8 @@ export function saveGame() {
             unlockedTitles: gameState.unlockedTitles,
             claimedGifts: gameState.claimedGifts,
             inventory: gameState.inventory,
-            studyel: gameState.studyel
+            studyel: gameState.studyel,
+            avatar: gameState.avatar
         };
         localStorage.setItem('sq_save_backup', JSON.stringify(backupSnapshot));
     } catch (backupErr) {

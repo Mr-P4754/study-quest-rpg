@@ -5,10 +5,11 @@
  * ==========================================
  */
 
-import { gameState, rawData, saveGame, runtimeState, RARITY_CAPS, LV_BONUS_RATE } from './state.js?v=10.1.5';
-import { getDisplayName, playSE, playBGM, stopBGM, updateMuteButtonsUI, ALL_GRADES, isGradeMatch } from './utils.js?v=10.1.5';
-import { closeAllCategoryModals, returnToCurrentCategory, showAlert, showConfirm } from './ui-manager.js?v=10.1.5';
-import { cloudSync } from './api.js?v=10.1.5';
+import { gameState, rawData, saveGame, runtimeState, RARITY_CAPS, LV_BONUS_RATE } from './state.js?v=10.2.4';
+import { getDisplayName, playSE, playBGM, stopBGM, updateMuteButtonsUI, ALL_GRADES, isGradeMatch, renderSafeImg } from './utils.js?v=10.2.4';
+import { closeAllCategoryModals, returnToCurrentCategory, showAlert, showConfirm } from './ui-manager.js?v=10.2.4';
+import { cloudSync } from './api.js?v=10.2.4';
+import { AVATAR_PARTS_DEF, AVATAR_MESSAGES, generateAvatarSvg } from './avatar-engine.js?v=10.2.4';
 
 // ----------------------------------------------------
 // 内部状態管理 & コスト定義
@@ -382,9 +383,7 @@ function renderPartyZukanGrid() {
             badgeHtml = '<div class="char-party-badge slot-2">後衛2</div>';
         }
 
-        const visual = (c.imageUrl && (c.imageUrl.startsWith('http') || c.imageUrl.startsWith('data:image'))) 
-            ? `<img src="${c.imageUrl}" class="char-img">` 
-            : `<div style="font-size:2em;line-height:50px">📦</div>`;
+        const visual = renderSafeImg(c.imageUrl, '📦', 'char-img');
 
         card.innerHTML = `
             ${badgeHtml}
@@ -425,9 +424,7 @@ export function updateTeamBattleSetupPreview() {
             const lv = (typeof invData.level === 'number' && invData.level >= 1) ? invData.level : 1;
             const displayName = getDisplayName(charMaster, invData, false);
             const cost = getTbCharaCost(charMaster, invData);
-            const imgTag = (charMaster.imageUrl && (charMaster.imageUrl.startsWith('http') || charMaster.imageUrl.startsWith('data:image')))
-                ? `<img src="${charMaster.imageUrl}" class="tb-mini-slot-img">`
-                : `<div style="font-size:1.6rem;line-height:36px;">📦</div>`;
+            const imgTag = renderSafeImg(charMaster.imageUrl, '📦', 'tb-mini-slot-img');
 
             slotsHtml += `
                 <div class="tb-mini-slot ${i === 0 ? 'main' : ''}" onclick="openPartyFormation()">
@@ -464,6 +461,19 @@ export function updateTeamBattleSetupPreview() {
             startBtn.style.opacity = '0.5';
             startBtn.style.cursor = 'not-allowed';
         }
+    }
+
+    // 読み込み済み相手アバターカードの描画復元
+    const opponentCard = document.getElementById('tb-scanned-opponent-card');
+    const avatarBox = document.getElementById('tb-opponent-avatar-box');
+    const msgEl = document.getElementById('tb-opponent-msg');
+
+    if (opponentCard && tbState.opponentAvatarInfo) {
+        if (avatarBox) avatarBox.innerHTML = generateAvatarSvg(tbState.opponentAvatarInfo.avatar, 46);
+        if (msgEl) msgEl.innerText = `「${tbState.opponentAvatarInfo.msg}」`;
+        opponentCard.style.display = 'block';
+    } else if (opponentCard) {
+        opponentCard.style.display = 'none';
     }
 }
 
@@ -619,6 +629,7 @@ export const tbState = {
     score: 0,
     earnedXp: 0,
     defeatedEnemies: [],// 倒した敵キャラクター一覧
+    opponentAvatarInfo: null,
     gameLoopTimer: null,
     timeLeft: 10,
     maxTime: 10,
@@ -873,6 +884,8 @@ export async function startTeamBattle() {
 
     if (!g) return alert("学年を選択してください。");
     if (typeof window.ensureGradeLoaded === 'function') await window.ensureGradeLoaded(g);
+
+    runtimeState.currentCategory = null; // バトル終了後にカテゴリーモーダルが開かないよう初期化
 
     // 問題の抽出
     let qList = (rawData.questions || []).filter(q => {
@@ -1674,7 +1687,7 @@ export function updateTbPlayerStatusUI() {
     // グラフィック
     if (visualEl) {
         if (activePlayer.imageUrl && (activePlayer.imageUrl.startsWith('http') || activePlayer.imageUrl.startsWith('data:image'))) {
-            visualEl.innerHTML = `<img src="${activePlayer.imageUrl}" class="tb-player-sprite">`;
+            visualEl.innerHTML = renderSafeImg(activePlayer.imageUrl, '✏️', 'tb-player-sprite');
         } else {
             visualEl.innerHTML = `<div class="tb-player-sprite" style="font-size:3.5rem;line-height:88px;text-align:center;">✏️</div>`;
         }
@@ -1715,7 +1728,7 @@ export function updateTbEnemyStatusUI() {
 
     if (visualEl) {
         if (enemy.imageUrl && enemy.imageUrl.startsWith('http')) {
-            visualEl.innerHTML = `<img src="${enemy.imageUrl}" class="tb-enemy-sprite">`;
+            visualEl.innerHTML = renderSafeImg(enemy.imageUrl, '👾', 'tb-enemy-sprite');
         } else {
             visualEl.innerHTML = `<div class="tb-enemy-sprite" style="font-size:3.2rem;line-height:80px;text-align:center;">👾</div>`;
         }
@@ -1734,9 +1747,7 @@ export function updateTbReserveUI() {
         if (!slotEl || !char) return;
 
         // アイコン HTML（画像がない場合はシンプルなアイコン）
-        const iconHtml = (char.imageUrl && (char.imageUrl.startsWith('http') || char.imageUrl.startsWith('data:image')))
-            ? `<img src="${char.imageUrl}" class="tb-reserve-img">`
-            : `<span style="font-size:1.3rem;">✏️</span>`;
+        const iconHtml = renderSafeImg(char.imageUrl, '✏️', 'tb-reserve-img');
 
         if (char.isAlive) {
             // 相性判定（複数属性・ALL対応・「相性:○」「相性:△」のみ表示）
@@ -1957,7 +1968,17 @@ export function generatePartyPassword() {
         return [charId, rarity, skillsStr, value];
     });
 
-    const jsonStr = JSON.stringify(extract);
+    const av = gameState.avatar || { base: 0, skinColor: "#fcd34d", eyes: 0, mouth: 0, hair: 0, hairColor: "#1e293b", outfit: 0, accessory: 0, msgId: 0 };
+    const skinIdx = Math.max(0, AVATAR_PARTS_DEF.skinColors.indexOf(av.skinColor));
+    const hairColIdx = Math.max(0, AVATAR_PARTS_DEF.hairColors.indexOf(av.hairColor));
+    const avCode = [av.base, skinIdx, av.eyes, av.mouth, av.hair, hairColIdx, av.outfit, av.accessory, av.msgId || 0];
+
+    const payload = {
+        party: extract,
+        avatar: avCode
+    };
+
+    const jsonStr = JSON.stringify(payload);
     const password = btoa(encodeURIComponent(jsonStr)).replace(/=+$/, '');
     
     // 現在のゲームURLをベースに、クエリパラメータとしてパスワードを付与
@@ -1984,8 +2005,9 @@ export function generateTbEnemyTeamFromPassword(password, playerParty) {
     try {
         const pad = password.length % 4 === 0 ? '' : '='.repeat(4 - (password.length % 4));
         const jsonStr = decodeURIComponent(atob(password + pad));
-        const extract = JSON.parse(jsonStr);
+        const parsed = JSON.parse(jsonStr);
 
+        let extract = Array.isArray(parsed) ? parsed : (parsed.party || null);
         if (!Array.isArray(extract) || extract.length !== 3) throw new Error("Format Error");
 
         // レア度の低い順（コストの低い順）にソート
@@ -2173,6 +2195,35 @@ export function setScannedData(pass) {
         clearBtn.classList.remove('btn-gray');
         clearBtn.classList.add('btn-red');
     }
+
+    try {
+        const pad = pass.length % 4 === 0 ? '' : '='.repeat(4 - (pass.length % 4));
+        const jsonStr = decodeURIComponent(atob(pass + pad));
+        const parsed = JSON.parse(jsonStr);
+
+        const avCode = parsed.avatar || (Array.isArray(parsed) && parsed[3] ? parsed[3] : null);
+
+        if (avCode && Array.isArray(avCode)) {
+            const oppAvatar = {
+                base: avCode[0] || 0,
+                skinColor: AVATAR_PARTS_DEF.skinColors[avCode[1]] || "#fcd34d",
+                eyes: avCode[2] || 0,
+                mouth: avCode[3] || 0,
+                hair: avCode[4] || 0,
+                hairColor: AVATAR_PARTS_DEF.hairColors[avCode[5]] || "#1e293b",
+                outfit: avCode[6] || 0,
+                accessory: avCode[7] || 0
+            };
+            const msgText = AVATAR_MESSAGES[avCode[8]] || AVATAR_MESSAGES[0];
+            tbState.opponentAvatarInfo = { avatar: oppAvatar, msg: msgText };
+        } else {
+            tbState.opponentAvatarInfo = null;
+        }
+    } catch (e) {
+        tbState.opponentAvatarInfo = null;
+    }
+
+    updateTeamBattleSetupPreview();
 }
 
 /**
@@ -2191,5 +2242,8 @@ export function clearScannedData() {
         clearBtn.classList.add('btn-gray');
         clearBtn.classList.remove('btn-red');
     }
+
+    tbState.opponentAvatarInfo = null;
+    updateTeamBattleSetupPreview();
 }
 

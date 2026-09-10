@@ -9,17 +9,19 @@ import {
     runtimeState,
     GUIDE_DATA,
     saveGame
-} from './state.js?v=10.1.5';
+} from './state.js?v=10.2.4';
 
 import {
     getDisplayName,
     drawRadarChart,
     playSE,
     ALL_GRADES,
-    isGradeMatch
-} from './utils.js?v=10.1.5';
+    isGradeMatch,
+    renderSafeImg
+} from './utils.js?v=10.2.4';
 
-import { cloudSync } from './api.js?v=10.1.5';
+import { cloudSync } from './api.js?v=10.2.4';
+import { generateAvatarSvg } from './avatar-engine.js?v=10.2.4';
 
 const SUBJECT_ORDER = [
     '国語', '算数', '数学', '理科', '社会', '英語', '情報',
@@ -419,7 +421,7 @@ export function updateTitleInfo() {
     const imgContainer = document.getElementById('title-chara-img');
     if(imgContainer) {
         if(chara?.imageUrl && (chara.imageUrl.startsWith('http') || chara.imageUrl.startsWith('data:image'))) {
-            imgContainer.innerHTML = `<img src="${chara.imageUrl}" style="width:100%;height:100%;object-fit:cover;">`;
+            imgContainer.innerHTML = renderSafeImg(chara.imageUrl, '✏️', '', 'width:100%;height:100%;object-fit:cover;');
         } else {
             imgContainer.innerHTML = `<div style="text-align:center;line-height:40px;">✏️</div>`;
         }
@@ -536,7 +538,7 @@ export function closeCategory(categoryId) {
 }
 
 export function closeAllCategoryModals() {
-    ['main', 'special', 'gacha', 'achievement', 'guide'].forEach(c => {
+    ['main', 'special', 'gacha', 'achievement', 'guide', 'sync'].forEach(c => {
         document.getElementById(`cat-${c}-overlay`)?.classList.add('hidden');
     });
 }
@@ -724,6 +726,7 @@ export function closeReliefMenu() {
 
 export function openSyncMenu() {
     closeAllCategoryModals();
+    runtimeState.currentCategory = 'sync';
     
     // 【フェイルセーフ】ユーザーIDの確実な解決
     if (!runtimeState.currentUserId && typeof localStorage !== 'undefined') {
@@ -801,7 +804,7 @@ export function updateCloudSyncIndicator(status, timeStr) {
 /**
  * HTML5 Canvasを用いた引き継ぎIDカード画像の動的生成・自動保存
  */
-export function generateAndDownloadIdCard() {
+export async function generateAndDownloadIdCard() {
     const userId = String(runtimeState?.currentUserId || (typeof localStorage !== 'undefined' ? localStorage.getItem('sq_user_id') : '') || '--------').trim();
     if (!userId || userId === '--------') {
         showAlert("⚠️ ユーザーIDが見つかりません。ゲームを一度プレイしてからお試しください。");
@@ -891,6 +894,20 @@ export function generateAndDownloadIdCard() {
     ctx.font = 'bold 34px "BIZ UDPGothic", "Courier New", monospace, sans-serif';
     ctx.fillStyle = '#2ecc71';
     ctx.fillText(userId, width / 2, boxY + 58);
+
+    // ▼ アバター顔グラフィックの非同期合成描画 ▼
+    const avSvg = generateAvatarSvg(gameState.avatar, 64);
+    if (avSvg) {
+        await new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                ctx.drawImage(img, boxX + boxW - 74, boxY + 6, 64, 64);
+                resolve();
+            };
+            img.onerror = () => resolve();
+            img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(avSvg);
+        });
+    }
 
     // 5. ステータス情報部（所持XP & 発行日時）
     const now = new Date();

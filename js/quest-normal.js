@@ -9,7 +9,7 @@ import {
     rogueData,
     runtimeState,
     saveGame
-} from './state.js?v=10.1.5';
+} from './state.js?v=10.2.4';
 
 import {
     getGradeMultiplier,
@@ -17,8 +17,9 @@ import {
     playSE,
     playBGM,
     stopBGM,
-    isGradeMatch
-} from './utils.js?v=10.1.5';
+    isGradeMatch,
+    renderSafeImg
+} from './utils.js?v=10.2.4';
 
 import {
     showCutIn,
@@ -27,12 +28,12 @@ import {
     startTimer,
     getCharaStats,
     finishGame
-} from './battle-core.js?v=10.1.5';
+} from './battle-core.js?v=10.2.4';
 
 import {
     updateMissionProgress,
     checkTitles
-} from './gacha-shop.js?v=10.1.5';
+} from './gacha-shop.js?v=10.2.4';
 
 import {
     showAppModal,
@@ -41,7 +42,7 @@ import {
     updateTitleInfo,
     openOathMenu,
     openReliefMenu
-} from './ui-manager.js?v=10.1.5';
+} from './ui-manager.js?v=10.2.4';
 
 // ==========================================
 // 通常クエスト
@@ -186,7 +187,7 @@ export function startGame() {
     if(uienemyName) uienemyName.innerText = boss.name;
     if(enemyIcon) {
         if(boss.icon && boss.icon.startsWith('http')) { 
-            enemyIcon.innerHTML = `<img src="${boss.icon}">`; 
+            enemyIcon.innerHTML = renderSafeImg(boss.icon, '👾'); 
         } else { 
             enemyIcon.innerHTML = boss.icon || '👾'; 
         }
@@ -599,7 +600,7 @@ export async function startRandomGame() {
     if(uienemyName) uienemyName.innerText = "【迷宮】" + boss.name;
     if(enemyIcon) {
         if(boss.icon && boss.icon.startsWith('http')) { 
-            enemyIcon.innerHTML = `<img src="${boss.icon}">`; 
+            enemyIcon.innerHTML = renderSafeImg(boss.icon, '👾'); 
         } else { 
             enemyIcon.innerHTML = boss.icon || "👾"; 
         }
@@ -750,7 +751,7 @@ export function startTypingGame() {
     if(uiEnemyName) uiEnemyName.innerText = boss.name;
     if(enemyIcon) {
         if(boss.icon && boss.icon.startsWith('http')) { 
-            enemyIcon.innerHTML = `<img src="${boss.icon}">`; 
+            enemyIcon.innerHTML = renderSafeImg(boss.icon, '👾'); 
         } else { 
             enemyIcon.innerHTML = boss.icon || "👾"; 
         }

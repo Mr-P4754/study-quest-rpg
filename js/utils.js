@@ -2,7 +2,7 @@
 // js/utils.js (計算ロジック・チャート描画・音響制御)
 // ==========================================
 
-import { RARITY_ORDER, runtimeState, rogueData } from './state.js?v=10.1.5';
+import { RARITY_ORDER, runtimeState, rogueData } from './state.js?v=10.2.4';
 
 export const getRarityIndex = (r) => RARITY_ORDER.indexOf(r);
 
@@ -370,5 +370,30 @@ export function playMmlBGM() {
         if (canPlay && !runtimeState.isMuted) bgmTimeout = setTimeout(scheduleNote, 500);
     };
     scheduleNote();
+}
+
+/**
+ * 安全な <img> HTML タグを生成（referrerpolicy="no-referrer" と onerror フォールバックを完備）
+ * Google Drive等のCDNがRefererヘッダーによるアクセス過多（HTTP 429/403）でブロックするのを物理遮断し、
+ * 通信失敗時も破れた画像アイコンにならず代替絵文字へ自動フォールバックする。
+ * 
+ * @param {string} url 画像URL
+ * @param {string} [altEmoji='👾'] 読み込み失敗時またはURL未指定時の代替絵文字
+ * @param {string} [className=''] class属性
+ * @param {string} [style=''] style属性
+ * @returns {string} HTML文字列
+ */
+export function renderSafeImg(url, altEmoji = '👾', className = '', style = '') {
+    if (!url || typeof url !== 'string' || (!url.startsWith('http') && !url.startsWith('data:image'))) {
+        const spanStyle = style ? `${style}; display:inline-flex; align-items:center; justify-content:center;` : 'display:inline-flex; align-items:center; justify-content:center;';
+        return `<span class="${className}" style="${spanStyle}">${altEmoji}</span>`;
+    }
+    const classAttr = className ? ` class="${className}"` : '';
+    const styleAttr = style ? ` style="${style}"` : '';
+    const safeAlt = (altEmoji || '👾').replace(/'/g, "\\'");
+    const safeClass = className.replace(/'/g, "\\'");
+    const safeStyle = (style ? `${style}; display:inline-flex; align-items:center; justify-content:center;` : 'display:inline-flex; align-items:center; justify-content:center;').replace(/'/g, "\\'");
+    const fallbackJs = `this.onerror=null; const s=document.createElement('span'); s.textContent='${safeAlt}'; ${safeClass ? `s.className='${safeClass}';` : ''} s.style.cssText='${safeStyle}'; this.replaceWith(s);`;
+    return `<img src="${url}" referrerpolicy="no-referrer"${classAttr}${styleAttr} onerror="${fallbackJs}">`;
 }
 

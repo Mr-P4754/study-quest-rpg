@@ -2,8 +2,8 @@
 // js/api.js (GASバックエンド通信・クラウド同期)
 // ==========================================
 
-import { API_URL, rawData, gameState, dailyMissions, runtimeState, saveGame } from './state.js?v=10.1.5';
-import { isGradeMatch, ALL_GRADES } from './utils.js?v=10.1.5';
+import { API_URL, rawData, gameState, dailyMissions, runtimeState, saveGame } from './state.js?v=10.2.4';
+import { isGradeMatch, ALL_GRADES } from './utils.js?v=10.2.4';
 
 // ==========================================
 // IndexedDB スマートキャッシュマネージャー
@@ -272,7 +272,8 @@ export function createSavePayload() {
             unitProgress: gameState.unitProgress || {},
             inventory: gameState.inventory || {},
             calcRecords: gameState.calcRecords || {},
-            studyel: gameState.studyel || {}
+            studyel: gameState.studyel || {},
+            avatar: gameState.avatar || {}
         }
     };
 }
@@ -647,6 +648,10 @@ export async function downloadData() {
             if (data.studyel) {
                 const sData = forceObj(data.studyel);
                 Object.assign(gameState.studyel, sData);
+            }
+
+            if (data.avatar) {
+                gameState.avatar = forceObj(data.avatar);
             }
 
             // ユーザーIDの確実な保存

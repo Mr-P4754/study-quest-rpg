@@ -32,9 +32,9 @@ import {
     loadSaveData,
     saveGame,
     getDefaultStudyelState
-} from './state.js?v=10.1.5';
+} from './state.js?v=10.2.4';
 
-import * as StudyelEngine from './studyel-engine.js?v=10.1.5';
+import * as StudyelEngine from './studyel-engine.js?v=10.2.4';
 window.StudyelEngine = StudyelEngine;
 
 import {
@@ -51,14 +51,14 @@ import {
     stopBGM,
     playMmlBGM,
     BGM_MML
-} from './utils.js?v=10.1.5';
+} from './utils.js?v=10.2.4';
 
 import {
     uploadData,
     downloadData,
     fetchData,
     cloudSync
-} from './api.js?v=10.1.5';
+} from './api.js?v=10.2.4';
 
 import {
     showCutIn,
@@ -73,7 +73,7 @@ import {
     finishGame,
     handleResultClose,
     backToTitle
-} from './battle-core.js?v=10.1.5';
+} from './battle-core.js?v=10.2.4';
 
 import {
     startNormalGameCheck,
@@ -108,7 +108,7 @@ import {
     toggleRelief,
     startOathGame,
     startReliefGame
-} from './quest-normal.js?v=10.1.5';
+} from './quest-normal.js?v=10.2.4';
 
 import {
     addRogueLog,
@@ -130,8 +130,12 @@ import {
     showRogueCutIn,
     updateRogueUI,
     escapeRogueConfirm,
-    exitRogueSystem
-} from './quest-explore.js?v=10.1.5';
+    exitRogueSystem,
+    onRogueBattleEnd,
+    startRogueLoop,
+    stopRogueLoop,
+    resumeRogueLoop
+} from './quest-explore.js?v=10.2.4';
 
 import {
     openGacha,
@@ -179,7 +183,7 @@ import {
     checkLoginBonus,
     closeLoginBonus,
     checkMissionDate
-} from './gacha-shop.js?v=10.1.5';
+} from './gacha-shop.js?v=10.2.4';
 
 import {
     initTitle,
@@ -231,7 +235,7 @@ import {
     GuideModule,
     generateAndDownloadIdCard,
     updateCloudSyncIndicator
-} from './ui-manager.js?v=10.1.5';
+} from './ui-manager.js?v=10.2.4';
 
 import {
     openTeamBattleSetup,
@@ -282,7 +286,18 @@ import {
     stopTbQrScanner,
     setScannedData,
     clearScannedData
-} from './special-quest-engine.js?v=10.1.5';
+} from './special-quest-engine.js?v=10.2.4';
+
+import {
+    openAvatarEditor,
+    closeAvatarEditor,
+    switchAvatarTab,
+    selectAvatarPart,
+    updateAvatarMsg,
+    randomizeAvatar,
+    saveAvatarSettings,
+    generateAvatarSvg
+} from './avatar-engine.js?v=10.2.4';
 
 // ==========================================
 // インライン onclick / 動的UI互換用 window 一括バインド
@@ -409,6 +424,10 @@ Object.assign(globalScope, {
     updateRogueUI,
     escapeRogueConfirm,
     exitRogueSystem,
+    onRogueBattleEnd,
+    startRogueLoop,
+    stopRogueLoop,
+    resumeRogueLoop,
 
     // ガチャ・図鑑・育成・ショップ・実績
     openGacha,
@@ -558,6 +577,16 @@ Object.assign(globalScope, {
     stopTbQrScanner,
     setScannedData,
     clearScannedData,
+
+    // アバター編集
+    openAvatarEditor,
+    closeAvatarEditor,
+    switchAvatarTab,
+    selectAvatarPart,
+    updateAvatarMsg,
+    randomizeAvatar,
+    saveAvatarSettings,
+    generateAvatarSvg,
 
     // スタディエル育成エンジン
     StudyelEngine

@@ -6,6 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
+    <meta name="referrer" content="no-referrer">
     <title>STUDY QUEST RPG</title>
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#2c3e50">
@@ -16,12 +17,12 @@
     <link rel="icon" href="./icons/icon-192.svg">
     <link rel="apple-touch-icon" href="./icons/icon-192.svg">
     <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/base.css?v=10.1.5">
-    <link rel="stylesheet" href="css/layout.css?v=10.1.5">
-    <link rel="stylesheet" href="css/components.css?v=10.1.5">
-    <link rel="stylesheet" href="css/quests.css?v=10.1.5">
-    <link rel="stylesheet" href="css/special-quest.css?v=10.1.5">
-    <link rel="stylesheet" href="css/studyel.css?v=10.1.5">
+    <link rel="stylesheet" href="css/base.css?v=10.2.4">
+    <link rel="stylesheet" href="css/layout.css?v=10.2.4">
+    <link rel="stylesheet" href="css/components.css?v=10.2.4">
+    <link rel="stylesheet" href="css/quests.css?v=10.2.4">
+    <link rel="stylesheet" href="css/special-quest.css?v=10.2.4">
+    <link rel="stylesheet" href="css/studyel.css?v=10.2.4">
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script>
         window.addEventListener('error', function(e) {
@@ -51,7 +52,7 @@
         <div id="campaign-text" class="campaign-text"></div>
     </div>
     <div class="title-logo">STUDY QUEST</div>
-    <div class="version-text" onclick="openVersionHistory()">Ver 10.1.5</div>
+    <div class="version-text" onclick="openVersionHistory()">Ver 10.2.4</div>
     
     <div id="title-news-banner" class="title-news-banner hidden" onclick="openCategory('special')">
         <span id="title-news-badge" class="title-news-badge">NEW!</span>
@@ -75,9 +76,9 @@
             <div class="rich-btn-title rich-btn-flex-title">🏆 実績・ギフト <div id="badge-achievement" class="badge hidden rich-btn-inline-badge">!</div></div>
             <div class="rich-btn-desc">ミッション報酬や称号、ギフトの受け取り！</div>
         </button>
-        <button class="rich-menu-btn border-left-blue" onclick="openSyncMenu()">
+        <button class="rich-menu-btn border-left-blue" onclick="openCategory('sync')">
             <div class="rich-btn-title">☁️ データ管理</div>
-            <div class="rich-btn-desc">データのバックアップや引き継ぎ設定！</div>
+            <div class="rich-btn-desc">アバター編集やデータのバックアップ設定！</div>
         </button>
         <button class="rich-menu-btn border-left-cyan" onclick="openCategory('guide')">
             <div class="rich-btn-title">📖 プレイガイド</div>
@@ -86,7 +87,7 @@
     </div>
     
     <div class="title-sync-bar">
-        <div id="cloud-sync-indicator" class="cloud-sync-indicator sync-badge-idle" onclick="openSyncMenu()" title="クラウド同期状態（クリックでデータ管理を開く）">☁️ 自動保存: 有効</div>
+        <div id="cloud-sync-indicator" class="cloud-sync-indicator sync-badge-idle" onclick="openCategory('sync')" title="クラウド同期状態（クリックでデータ管理を開く）">☁️ 自動保存: 有効</div>
     </div>
 
     <div class="title-footer">
@@ -216,15 +217,41 @@
         <button class="menu-btn mt-20 btn-gray" onclick="closeCategory('guide')">閉じる</button>
     </div>
 </div>
+
+<!-- カテゴリー：データ管理 -->
+<div id="cat-sync-overlay" class="overlay overlay-z220 hidden">
+    <div class="modal modal-w450">
+        <h2 class="text-blue mt-0">☁️ データ管理</h2>
+        <div class="sub-menu-grid">
+            <button class="rich-menu-btn" onclick="openAvatarEditor();">
+                <div class="rich-btn-title">🎨 アバター編集</div>
+                <div class="rich-btn-desc">あなたの見た目や挨拶メッセージをカスタマイズ！</div>
+            </button>
+            <button class="rich-menu-btn" onclick="openSyncMenu();">
+                <div class="rich-btn-title">☁️ クラウドセーブ・引き継ぎ</div>
+                <div class="rich-btn-desc">固有IDでの手動保存やIDカードの画像保存！</div>
+            </button>
+        </div>
+        <button class="menu-btn mt-20 btn-gray" onclick="closeCategory('sync')">閉じる</button>
+    </div>
+</div>
     
 <div id="field-screen" class="screen field-screen-bg hidden">
     <div class="header rogue-header-bar">
-        <div class="rogue-life-text" id="rogue-life">❤️❤️❤️</div>
-        <div class="rogue-floor-text">階層: <span id="rogue-floor" class="text-gold text-xl">1</span>F</div>
-        <div class="rogue-steps-text">歩数: <span id="rogue-steps" class="text-red text-xl">0/0</span></div>
-        <div class="rogue-stats-text">
-            <span>探索Lv: <span id="rogue-explv" class="text-emerald text-xl">1</span></span>
-            <span>獲得XP: <span id="rogue-ctxp" class="text-orange text-xl">0</span></span>
+        <div class="rogue-header-top">
+            <div class="rogue-life-text" id="rogue-life">❤️❤️❤️</div>
+            <div class="rogue-floor-text">階層: <span id="rogue-floor" class="text-gold text-xl">1</span>F</div>
+            <div class="rogue-stats-text">
+                <span>探索Lv: <span id="rogue-explv" class="text-emerald text-xl">1</span></span>
+                <span>獲得XP: <span id="rogue-ctxp" class="text-orange text-xl">0</span></span>
+            </div>
+        </div>
+        <div class="rogue-stamina-wrap">
+            <div class="rogue-stamina-bar-track">
+                <div id="rogue-stamina-fill" class="rogue-stamina-bar-fill"></div>
+            </div>
+            <div id="rogue-stamina-text" class="rogue-stamina-text">歩数: 30 / 30</div>
+            <span id="rogue-steps" class="hidden">0/0</span>
         </div>
     </div>
     <div id="rogue-log-container" class="rogue-log-container">
@@ -235,13 +262,14 @@
     </div>
     
     <div class="rogue-ctrl-panel">
-        <div id="rogue-dpad" class="rogue-dpad-box">
-            <div></div><button class="menu-btn rogue-dpad-btn" onclick="moveRoguePlayer(0, -1)">▲</button><div></div>
-            <button class="menu-btn rogue-dpad-btn" onclick="moveRoguePlayer(-1, 0)">◀</button>
-            <div></div> <button class="menu-btn rogue-dpad-btn" onclick="moveRoguePlayer(1, 0)">▶</button>
-            <div></div><button class="menu-btn rogue-dpad-btn" onclick="moveRoguePlayer(0, 1)">▼</button><div></div>
+        <div id="rogue-joystick-zone" class="rogue-joystick-zone">
+            <div id="rogue-joystick-base" class="rogue-joystick-base">
+                <div id="rogue-joystick-knob" class="rogue-joystick-knob"></div>
+            </div>
         </div>
-        <button class="menu-btn rogue-escape-btn" onclick="escapeRogueConfirm()">帰還</button>
+        <div class="rogue-actions-box">
+            <button id="rogue-escape-btn" class="menu-btn rogue-escape-btn" onclick="escapeRogueConfirm()">帰還</button>
+        </div>
     </div>
 </div>
 
@@ -362,6 +390,16 @@
             <label class="font-bold text-dark text-sm tb-password-label">フレンド対戦（任意）</label>
             
             <div id="tb-scanned-status" class="tb-scanned-status">✅ 対戦データ読取完了</div>
+            <div id="tb-scanned-opponent-card" style="display: none; background: #f8fafc; border: 2px solid #3b82f6; border-radius: 10px; padding: 8px 12px; margin: 8px 0; text-align: left;">
+                <div style="font-size: 0.72rem; font-weight: bold; color: #0284c7; margin-bottom: 4px;">👤 読み取り済み対戦相手</div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div id="tb-opponent-avatar-box" style="width: 46px; height: 46px; border-radius: 50%; overflow: hidden; border: 2px solid #cbd5e1; flex-shrink: 0; background: #fff;"></div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div id="tb-opponent-msg" style="font-size: 0.82rem; font-weight: bold; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">「よろしくお願いします！」</div>
+                        <div id="tb-opponent-party-summary" style="font-size: 0.7rem; color: #64748b; margin-top: 2px;">出撃チーム確認完了</div>
+                    </div>
+                </div>
+            </div>
             <input type="hidden" id="tb-password-input" value="">
             
             <div class="tb-password-btn-row">
@@ -427,6 +465,46 @@
             <button class="menu-btn relief btn-blue" onclick="goToReliefMenuSurvivalCheck()">🕊️ 救済へ</button>
         </div>
         <button class="menu-btn mt-10 btn-gray" onclick="closeSurvivalMenu()">やめる</button>
+    </div>
+</div>
+
+<!-- アバター編集モーダル -->
+<div id="avatar-modal-overlay" class="overlay overlay-z300 hidden">
+    <div class="modal modal-w450" style="max-height: 90vh; overflow-y: auto;">
+        <div class="modal-header-row-sm">
+            <h2 class="text-dark m-0">🎨 アバター編集</h2>
+            <button class="guide-close-x" type="button" onclick="closeAvatarEditor()">✕</button>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; align-items: center; margin: 10px 0;">
+            <div id="avatar-preview-box" style="width: 130px; height: 130px; background: radial-gradient(circle, #f8fafc 0%, #cbd5e1 100%); border: 3px solid #3b82f6; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.15); overflow: hidden; display: flex; align-items: center; justify-content: center;"></div>
+            <div style="margin-top: 10px; width: 90%; max-width: 320px;">
+                <label class="text-xs font-bold text-gray" style="display:block; text-align:left; margin-bottom:2px;">対戦挨拶メッセージ</label>
+                <select id="avatar-msg-select" class="select-box cat-select-full" style="font-size:0.85em; padding:6px;" onchange="updateAvatarMsg(this.value)">
+                    <option value="0">よろしくお願いします！</option>
+                    <option value="1">今日も楽しく勉強しよう！</option>
+                    <option value="2">全力で勝負だ！</option>
+                    <option value="3">負けないよ！</option>
+                    <option value="4">目指せ全問正解！</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="item-tab-container" style="margin-bottom: 8px;">
+            <div class="item-tab active" id="av-tab-base" onclick="switchAvatarTab('base')">輪郭・肌</div>
+            <div class="item-tab" id="av-tab-eyes" onclick="switchAvatarTab('eyes')">目・表情</div>
+            <div class="item-tab" id="av-tab-hair" onclick="switchAvatarTab('hair')">髪型</div>
+            <div class="item-tab" id="av-tab-hairColor" onclick="switchAvatarTab('hairColor')">髪色</div>
+            <div class="item-tab" id="av-tab-outfit" onclick="switchAvatarTab('outfit')">服</div>
+            <div class="item-tab" id="av-tab-acc" onclick="switchAvatarTab('acc')">装飾</div>
+        </div>
+
+        <div id="avatar-palette-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; min-height: 120px; max-height: 180px; overflow-y: auto; padding: 4px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;"></div>
+
+        <div class="modal-btn-grid mt-15">
+            <button class="menu-btn btn-blue" type="button" onclick="randomizeAvatar()">🎲 おまかせ</button>
+            <button class="menu-btn btn-green" type="button" onclick="saveAvatarSettings()">保存して戻る</button>
+        </div>
     </div>
 </div>
 
@@ -558,7 +636,7 @@
                 <button class="help-btn" onclick="GuideModule.open('enhance')">❓</button>
             </div>
             <div class="rarity-SSR mb-10" id="cd-rarity">SSR</div>
-            <img id="cd-img" src="" class="detail-img" alt="キャラクター画像">
+            <img id="cd-img" src="" class="detail-img" referrerpolicy="no-referrer" alt="キャラクター画像">
             <div class="chara-stat-table">
                 <div class="detail-stat-row"><span>レベル</span><span id="cd-lv" class="font-bold text-blue">Lv.0 / 20</span></div>
                 <div class="detail-stat-row align-center"><span>EXP</span><div class="chara-exp-cell"><div class="exp-bar-container"><div id="cd-exp-bar" class="exp-bar-fill"></div></div><div id="cd-exp-text" class="chara-exp-subtext">0 / 100</div></div></div>
@@ -722,7 +800,7 @@
                 <span class="party-slot-badge">🛡️ 後衛1</span>
                 <span id="party-slot-1-cost" class="party-slot-cost-badge">Cost 0</span>
                 <button class="party-slot-remove-btn" type="button">×</button>
-                <img id="party-slot-1-img" src="" class="party-slot-img hidden" alt="後衛1キャラ">
+                <img id="party-slot-1-img" src="" class="party-slot-img hidden" referrerpolicy="no-referrer" alt="後衛1キャラ">
                 <div id="party-slot-1-empty" class="party-slot-empty">
                     <div class="party-slot-empty-icon">➕</div>
                     <div class="party-slot-empty-text">後衛1を選択</div>
@@ -742,7 +820,7 @@
                 <span class="party-slot-badge">🛡️ 後衛2</span>
                 <span id="party-slot-2-cost" class="party-slot-cost-badge">Cost 0</span>
                 <button class="party-slot-remove-btn" type="button">×</button>
-                <img id="party-slot-2-img" src="" class="party-slot-img hidden" alt="後衛2キャラ">
+                <img id="party-slot-2-img" src="" class="party-slot-img hidden" referrerpolicy="no-referrer" alt="後衛2キャラ">
                 <div id="party-slot-2-empty" class="party-slot-empty">
                     <div class="party-slot-empty-icon">➕</div>
                     <div class="party-slot-empty-text">後衛2を選択</div>
@@ -886,7 +964,37 @@
     <div class="modal modal-w500">
         <h2 class="text-blue mt-0">📋 更新履歴</h2>
         <div class="version-list version-list-box">
-            <h4>Ver 10.1.5（最新安定版：強制クラウドセーブ＆ID自動保全システム導入）</h4>
+            <h4>Ver 10.2.4（最新安定版：探索クエスト 歩数・ゴール距離・敵レア度非表示調整）</h4>
+            <ul>
+                <li>👟 <b>初期歩数スタミナの増加</b>: デフォルトの所持歩数を30歩から「50歩」（TIME属性オトモ連れ歩き時は60歩）に大幅増加。より余裕を持って広大なフィールドを探索可能に。</li>
+                <li>🚪 <b>ゴール配置距離の調整</b>: スタートからゴールまでの距離を歩数の50%から「歩数の30%」（15歩相当）へ見直し、初期配置のテンポ感を改善。</li>
+                <li>👾 <b>フィールド上のモンスターレア度非表示</b>: 探索フィールド上でモンスターの頭上に表示されていたレア度バッジ（[N], [R]等）を非表示化し、すっきりとしたフィールド視認性を確保。</li>
+            </ul>
+            <h4>Ver 10.2.3（モンスター画像読み込み安定化＆アクセス制限回避）</h4>
+            <ul>
+                <li>🛡️ <b>Google CDN画像読み込みの安定化</b>: Google Drive配信モンスター画像（焦げたクロワッサン等）に対するReferrer過多によるブロック（HTTP 429 Too Many Requests）を防止するため、no-referrerポリシーおよび全画像タグへの安全な通信制御を導入。</li>
+                <li>👾 <b>エラー時自動フォールバック機能</b>: ネットワーク瞬断やGoogle側のレート制限時でも、ブラウザの壊れた破れ画像アイコンが表示されることなく、自動的に代替アイコン（👾等）へ安全に切り替わる保護処理を全バトル画面・図鑑・ガチャ画面に完備。</li>
+            </ul>
+            <h4>Ver 10.2.1（探索クエスト オープンワールド・オトモ連れ歩き大改修）</h4>
+            <ul>
+                <li>🧭 <b>オープンワールド・フィールド探索</b>: 従来のマス移動から、1,200×1,200px の広大なオープンフィールドを自由に駆け巡る探索へ大刷新！360°滑らかに動くバーチャルジョイスティック＆PC WASD移動に対応。</li>
+                <li>👾 <b>直線コリドー敵配置＆画面外動的リスポーン</b>: スタートからゴール（🚪）への直線帯に敵モンスターが集中配置され、大回り（歩数消費）か強行突破（ライフ消費）かの駆け引きが白熱。撃破敵は画面外から自動リポップ。</li>
+                <li>🐾 <b>オトモ連れ歩き＆属性パッシブ効果</b>: 装備キャラクター（スタディエル成体含む）がアバターの後ろをふわふわ浮遊追従！【炎】先制攻撃15%削り、【水】最大歩数+10歩、【雷】宝箱報酬2倍＆ショップ20%引、【万能】全効果＋ゲート方角感知が発動！</li>
+                <li>📊 <b>歩数スタミナバー＆360°レーダーミニマップ</b>: 残り歩数をリアルタイムで可視化するヘッダーゲージを新設。画面右上には画面外の敵や宝箱・ゴールの位置を一望できるミニマップを完備。</li>
+            </ul>
+            <h4>Ver 10.1.7（アバター頭部・髪型パーツの完全刷新）</h4>
+            <ul>
+                <li>🎨 <b>輪郭と髪型パーツのバランス刷新</b>: すっきり型輪郭を自然な丸みのある頭蓋骨ラインへ改修し、角の飛び出しを根絶。全髪型で前髪を目元まで届く適切な長さへ再設計し、頭全体を美しく包み込むキャラクターデザインへ進化。</li>
+            </ul>
+            <h4>Ver 10.1.6（アバター作成機能＆データ管理階層改修）</h4>
+            <ul>
+                <li>🎨 <b>アバター作成機能新設</b>: 自分好みの見た目（輪郭・目・髪型・髪色・服・装飾）をインラインベクターSVGで自由にカスタマイズ可能に。安全な定型文挨拶（5種）を完備。</li>
+                <li>☁️ <b>2層式データ管理カテゴリーモーダル（#cat-sync-overlay）</b>: 「🎨 アバター編集」と「☁️ クラウドセーブ」を綺麗に整理した階層遷移を新設。</li>
+                <li>👤 <b>フレンド対戦相手アバター＆挨拶プレビュー</b>: チームバトル出撃準備画面にて、読み取った対戦相手のアバターと挨拶メッセージを表示。戦闘画面の視認性は維持。</li>
+                <li>📷 <b>IDカード画像へのアバター自動合成</b>: IDカード画像保存時に、作成したアバターのグラフィックを右上に高解像度合成描画。</li>
+                <li>🔄 <b>対戦QR相互互換エンコード</b>: 新旧どちらの対戦QRコード形式も自動判別してスムーズに対戦可能。</li>
+            </ul>
+            <h4>Ver 10.1.5（強制クラウドセーブ＆ID自動保全システム導入）</h4>
             <ul>
                 <li>☁️ <b>強制クラウドセーブ（CloudSyncQueue）</b>: 通常クエスト・サバイバル・計算・探索・チームバトル等のリザルト確定時、および画面離脱時（タブ閉じ等）に、生徒の最新プレイデータを自動かつ非同期でクラウドへ安全バックアップ。</li>
                 <li>⚡ <b>完全ノンブロッキング（楽観的UI）</b>: 通信待ちのスピナーや画面ロックを一切排除。リザルト画面から即座に次へ進める快適なプレイ体験を担保。</li>
@@ -1158,7 +1266,7 @@
     </div>
 </div>
 
-<script type="module" src="js/main.js?v=10.1.5"></script>
+<script type="module" src="js/main.js?v=10.2.4"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {

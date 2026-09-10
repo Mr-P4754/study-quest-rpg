@@ -11,7 +11,7 @@ import {
     runtimeState,
     LV_BONUS_RATE,
     saveGame
-} from './state.js?v=10.1.5';
+} from './state.js?v=10.2.4';
 
 import {
     getDisplayName,
@@ -19,13 +19,14 @@ import {
     playSE,
     playBGM,
     stopBGM,
-    isGradeMatch
-} from './utils.js?v=10.1.5';
+    isGradeMatch,
+    renderSafeImg
+} from './utils.js?v=10.2.4';
 
 import {
     updateMissionProgress,
     checkTitles
-} from './gacha-shop.js?v=10.1.5';
+} from './gacha-shop.js?v=10.2.4';
 
 import {
     showAppModal,
@@ -33,9 +34,9 @@ import {
     showConfirm,
     updateTitleInfo,
     addCalcRecord
-} from './ui-manager.js?v=10.1.5';
+} from './ui-manager.js?v=10.2.4';
 
-import { cloudSync } from './api.js?v=10.1.5';
+import { cloudSync } from './api.js?v=10.2.4';
 
 export function showCutIn(t) { 
     const str = String(t);
@@ -87,8 +88,9 @@ export function togglePause() {
             const r = inv.currentRarity || chara.rarity;
             const name = getDisplayName(chara, inv);
             let val = Number(baseVal) + (inv.level * LV_BONUS_RATE);
-            let visual = "";
-            if(chara.imageUrl && (chara.imageUrl.startsWith('http') || chara.imageUrl.startsWith('data:image'))) visual = `<img src="${chara.imageUrl}" style="width:60px;height:60px;object-fit:contain;background:#fff;border-radius:5px;">`; else visual = `<div style="font-size:40px;">✏️</div>`;
+            let visual = (chara.imageUrl && (chara.imageUrl.startsWith('http') || chara.imageUrl.startsWith('data:image'))) 
+                ? renderSafeImg(chara.imageUrl, '✏️', '', 'width:60px;height:60px;object-fit:contain;background:#fff;border-radius:5px;')
+                : `<div style="font-size:40px;">✏️</div>`;
             infoBox.innerHTML = `<div style="display:flex; align-items:center; gap:10px; text-align:left;">${visual}<div><div style="font-weight:bold; color:#ecf0f1; font-size:0.9em;">${name}</div><div style="color:#f39c12; font-weight:bold; font-size:0.8em;">Lv.${inv.level}</div><div style="font-size:0.7em; color:#bdc3c7;"><span class="rarity-${r}" style="font-weight:bold; font-size:1.2em; margin-right:5px;">${r}</span>効果: x${val.toFixed(2)}</div></div></div>`;
         } else { infoBox.innerHTML = `<div style="color:#bdc3c7; font-size:0.8em;">装備なし</div>`; }
     }
@@ -642,8 +644,13 @@ export function handleResultClose() {
         if (rogueData.isBossBattle) {
             rogueData.floor++;
             if (typeof window.generateRogueFloor === 'function') window.generateRogueFloor();
+            if (typeof window.startRogueLoop === 'function') window.startRogueLoop();
         } else {
-            if (typeof window.drawRogueMap === 'function') window.drawRogueMap();
+            if (typeof window.onRogueBattleEnd === 'function') {
+                window.onRogueBattleEnd(true);
+            } else if (typeof window.drawRogueMap === 'function') {
+                window.drawRogueMap();
+            }
             if (rogueData.steps <= 0) {
                 setTimeout(() => {
                     if (typeof showAppModal === 'function') {

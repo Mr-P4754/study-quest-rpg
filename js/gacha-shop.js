@@ -23,13 +23,14 @@ import {
     MISSIONS,
     MISSION_ALL_CLEAR,
     saveGame
-} from './state.js?v=10.1.5';
+} from './state.js?v=10.2.4';
 
 import {
     getRarityIndex,
     getDisplayName,
-    playSE
-} from './utils.js?v=10.1.5';
+    playSE,
+    renderSafeImg
+} from './utils.js?v=10.2.4';
 
 import {
     showAppModal,
@@ -40,7 +41,7 @@ import {
     returnToCurrentCategory,
     closeAllCategoryModals,
     updateCategoryBadges
-} from './ui-manager.js?v=10.1.5';
+} from './ui-manager.js?v=10.2.4';
 
 let selectedMaterials = {};
 let viewingCharaId = null;
@@ -132,12 +133,7 @@ export function showGachaResult(charas) {
     if (!container) return;
     if (charas.length === 1) {
         const c = charas[0];
-        let imgTag = "";
-        if (c.imageUrl && (c.imageUrl.startsWith('http') || c.imageUrl.startsWith('data:image'))) {
-            imgTag = `<img src="${c.imageUrl}" style="width:100px;height:100px;object-fit:contain;margin:10px auto;display:block;">`;
-        } else {
-            imgTag = `<div style="font-size:60px;margin:10px 0;">📦</div>`;
-        }
+        let imgTag = renderSafeImg(c.imageUrl, '📦', '', 'width:100px;height:100px;object-fit:contain;margin:10px auto;display:block;');
         container.innerHTML = `
             <div class="gacha-result-card">
                 <div class="rarity-${c.rarity}" style="font-size:1.5em; font-weight:bold;">${c.rarity}</div>
@@ -149,12 +145,7 @@ export function showGachaResult(charas) {
     } else {
         let gridHtml = `<div class="gr-grid">`;
         charas.forEach((c, index) => {
-            let imgTag = "";
-            if (c.imageUrl && (c.imageUrl.startsWith('http') || c.imageUrl.startsWith('data:image'))) {
-                imgTag = `<img src="${c.imageUrl}" class="gr-mini-img">`;
-            } else {
-                imgTag = `<div style="font-size:30px; margin:5px 0;">📦</div>`;
-            }
+            let imgTag = renderSafeImg(c.imageUrl, '📦', 'gr-mini-img');
             const isLast = (index === 9);
             const extraStyle = isLast ? 'border: 2px solid #f1c40f; background: #fffbe6;' : '';
             gridHtml += `
@@ -212,7 +203,7 @@ export function renderZukan() {
         let decoName = "???"; 
         if(isOwned) {
             if (typeof data.level !== 'number' || data.level < 1) data.level = 1;
-            visual = (c.imageUrl && (c.imageUrl.startsWith('http') || c.imageUrl.startsWith('data:image'))) ? `<img src="${c.imageUrl}" class="char-img">` : `<div style="font-size:2em;line-height:50px">📦</div>`;
+            visual = renderSafeImg(c.imageUrl, '📦', 'char-img');
             const currentRarity = data.currentRarity || c.rarity; 
             decoName = getDisplayName(c, data); 
             nameText = `<span class="rarity-${currentRarity}">${currentRarity}</span> / ${c.type}`;
@@ -489,7 +480,7 @@ export function renderEnhanceList() {
         const selectCount = selectedMaterials[c.id] || 0; 
         const expVal = MAT_EXP[c.rarity] || 25; 
         if(selectCount > 0) totalGain += (expVal * selectCount);
-        let visual = (c.imageUrl && (c.imageUrl.startsWith('http') || c.imageUrl.startsWith('data:image'))) ? `<img src="${c.imageUrl}" style="width:40px;height:40px;">` : `<span>📦</span>`;
+        let visual = renderSafeImg(c.imageUrl, '📦', '', 'width:40px;height:40px;');
         let activeClass = selectCount > 0 ? 'selected' : ''; 
         let badge = selectCount > 0 ? `<div class="mat-select-badge">${selectCount}</div>` : '';
         list.innerHTML += `<div class="mat-card ${activeClass}" onclick="toggleMaterial('${c.id}', ${inv.count})">${badge}<div class="rarity-${c.rarity}">${c.rarity}</div>${visual}<div style="font-weight:bold; font-size:0.8em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${c.name}</div><div style="font-size:0.7em;">所持: ${inv.count}</div><div class="mat-exp-val">+${expVal}</div></div>`;
