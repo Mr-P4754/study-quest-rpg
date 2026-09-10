@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // js/ui-manager.js (カテゴリー遷移・モーダル・プレイガイド・成績表・ギフト)
 // ==========================================
 
@@ -9,7 +9,7 @@ import {
     runtimeState,
     GUIDE_DATA,
     saveGame
-} from './state.js?v=10.2.5';
+} from './state.js?v=10.2.6';
 
 import {
     getDisplayName,
@@ -18,10 +18,10 @@ import {
     ALL_GRADES,
     isGradeMatch,
     renderSafeImg
-} from './utils.js?v=10.2.5';
+} from './utils.js?v=10.2.6';
 
-import { cloudSync } from './api.js?v=10.2.5';
-import { generateAvatarSvg } from './avatar-engine.js?v=10.2.5';
+import { cloudSync } from './api.js?v=10.2.6';
+import { generateAvatarSvg } from './avatar-engine.js?v=10.2.6';
 
 const SUBJECT_ORDER = [
     '国語', '算数', '数学', '理科', '社会', '英語', '情報',

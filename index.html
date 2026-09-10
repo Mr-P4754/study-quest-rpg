@@ -17,12 +17,12 @@
     <link rel="icon" href="./icons/icon-192.svg">
     <link rel="apple-touch-icon" href="./icons/icon-192.svg">
     <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/base.css?v=10.2.5">
-    <link rel="stylesheet" href="css/layout.css?v=10.2.5">
-    <link rel="stylesheet" href="css/components.css?v=10.2.5">
-    <link rel="stylesheet" href="css/quests.css?v=10.2.5">
-    <link rel="stylesheet" href="css/special-quest.css?v=10.2.5">
-    <link rel="stylesheet" href="css/studyel.css?v=10.2.5">
+    <link rel="stylesheet" href="css/base.css?v=10.2.6">
+    <link rel="stylesheet" href="css/layout.css?v=10.2.6">
+    <link rel="stylesheet" href="css/components.css?v=10.2.6">
+    <link rel="stylesheet" href="css/quests.css?v=10.2.6">
+    <link rel="stylesheet" href="css/special-quest.css?v=10.2.6">
+    <link rel="stylesheet" href="css/studyel.css?v=10.2.6">
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script>
         window.addEventListener('error', function(e) {
@@ -52,7 +52,7 @@
         <div id="campaign-text" class="campaign-text"></div>
     </div>
     <div class="title-logo">STUDY QUEST</div>
-    <div class="version-text" onclick="openVersionHistory()">Ver 10.2.5</div>
+    <div class="version-text" onclick="openVersionHistory()">Ver 10.2.6</div>
     
     <div id="title-news-banner" class="title-news-banner hidden" onclick="openCategory('special')">
         <span id="title-news-badge" class="title-news-badge">NEW!</span>
@@ -964,7 +964,11 @@
     <div class="modal modal-w500">
         <h2 class="text-blue mt-0">📋 更新履歴</h2>
         <div class="version-list version-list-box">
-            <h4>Ver 10.2.5（最新安定版：探索プレイヤー移動速度調整）</h4>
+            <h4>Ver 10.2.6（最新安定版：モバイル探索操作をジョイスティックのみに一本化）</h4>
+            <ul>
+                <li>🕹️ <b>モバイル操作の適正化</b>: スマホやタブレットなどのモバイル端末において、意図しない画面タップ・タッチによる誤移動・操作ミスを防止するため、画面タッチ直接移動を廃止し、移動を「バーチャルアナログジョイスティック操作」のみに一本化。</li>
+            </ul>
+            <h4>Ver 10.2.5（探索プレイヤー移動速度調整）</h4>
             <ul>
                 <li>🏃 <b>移動速度の適正化</b>: プレイヤーのフィールド移動速度を従来の約43%減速（2.8 ➔ 1.6）。敵を直線で簡単に振り切れなくなり、大回りやルート選択などの緊張感ある駆け引きを実現。</li>
             </ul>
@@ -1270,7 +1274,7 @@
     </div>
 </div>
 
-<script type="module" src="js/main.js?v=10.2.5"></script>
+<script type="module" src="js/main.js?v=10.2.6"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {

@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // js/main.js (メインエントリーポイント・グローバル公開バインド)
 // ==========================================
 
@@ -32,9 +32,9 @@ import {
     loadSaveData,
     saveGame,
     getDefaultStudyelState
-} from './state.js?v=10.2.5';
+} from './state.js?v=10.2.6';
 
-import * as StudyelEngine from './studyel-engine.js?v=10.2.5';
+import * as StudyelEngine from './studyel-engine.js?v=10.2.6';
 window.StudyelEngine = StudyelEngine;
 
 import {
@@ -51,14 +51,14 @@ import {
     stopBGM,
     playMmlBGM,
     BGM_MML
-} from './utils.js?v=10.2.5';
+} from './utils.js?v=10.2.6';
 
 import {
     uploadData,
     downloadData,
     fetchData,
     cloudSync
-} from './api.js?v=10.2.5';
+} from './api.js?v=10.2.6';
 
 import {
     showCutIn,
@@ -73,7 +73,7 @@ import {
     finishGame,
     handleResultClose,
     backToTitle
-} from './battle-core.js?v=10.2.5';
+} from './battle-core.js?v=10.2.6';
 
 import {
     startNormalGameCheck,
@@ -108,7 +108,7 @@ import {
     toggleRelief,
     startOathGame,
     startReliefGame
-} from './quest-normal.js?v=10.2.5';
+} from './quest-normal.js?v=10.2.6';
 
 import {
     addRogueLog,
@@ -135,7 +135,7 @@ import {
     startRogueLoop,
     stopRogueLoop,
     resumeRogueLoop
-} from './quest-explore.js?v=10.2.5';
+} from './quest-explore.js?v=10.2.6';
 
 import {
     openGacha,
@@ -183,7 +183,7 @@ import {
     checkLoginBonus,
     closeLoginBonus,
     checkMissionDate
-} from './gacha-shop.js?v=10.2.5';
+} from './gacha-shop.js?v=10.2.6';
 
 import {
     initTitle,
@@ -235,7 +235,7 @@ import {
     GuideModule,
     generateAndDownloadIdCard,
     updateCloudSyncIndicator
-} from './ui-manager.js?v=10.2.5';
+} from './ui-manager.js?v=10.2.6';
 
 import {
     openTeamBattleSetup,
@@ -286,7 +286,7 @@ import {
     stopTbQrScanner,
     setScannedData,
     clearScannedData
-} from './special-quest-engine.js?v=10.2.5';
+} from './special-quest-engine.js?v=10.2.6';
 
 import {
     openAvatarEditor,
@@ -297,7 +297,7 @@ import {
     randomizeAvatar,
     saveAvatarSettings,
     generateAvatarSvg
-} from './avatar-engine.js?v=10.2.5';
+} from './avatar-engine.js?v=10.2.6';
 
 // ==========================================
 // インライン onclick / 動的UI互換用 window 一括バインド

@@ -1,12 +1,12 @@
-// ============================================================
+﻿// ============================================================
 // js/studyel-engine.js - スタディエル育成システム統合エンジン
 // Ver 3.5 完全無欠・最終確定版
 // ============================================================
 
-import { gameState, rawData, saveGame, playData, rogueData } from './state.js?v=10.2.5';
-import { playSE } from './utils.js?v=10.2.5';
-import { showCutIn } from './battle-core.js?v=10.2.5';
-import { GuideModule } from './ui-manager.js?v=10.2.5';
+import { gameState, rawData, saveGame, playData, rogueData } from './state.js?v=10.2.6';
+import { playSE } from './utils.js?v=10.2.6';
+import { showCutIn } from './battle-core.js?v=10.2.6';
+import { GuideModule } from './ui-manager.js?v=10.2.6';
 
 // ------------------------------------------------------------
 // 定数・設定定義

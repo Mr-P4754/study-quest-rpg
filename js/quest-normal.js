@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // js/quest-normal.js (通常・サバイバル・計算・タイピング・リベンジ進行)
 // ==========================================
 
@@ -9,7 +9,7 @@ import {
     rogueData,
     runtimeState,
     saveGame
-} from './state.js?v=10.2.5';
+} from './state.js?v=10.2.6';
 
 import {
     getGradeMultiplier,
@@ -19,7 +19,7 @@ import {
     stopBGM,
     isGradeMatch,
     renderSafeImg
-} from './utils.js?v=10.2.5';
+} from './utils.js?v=10.2.6';
 
 import {
     showCutIn,
@@ -28,12 +28,12 @@ import {
     startTimer,
     getCharaStats,
     finishGame
-} from './battle-core.js?v=10.2.5';
+} from './battle-core.js?v=10.2.6';
 
 import {
     updateMissionProgress,
     checkTitles
-} from './gacha-shop.js?v=10.2.5';
+} from './gacha-shop.js?v=10.2.6';
 
 import {
     showAppModal,
@@ -42,7 +42,7 @@ import {
     updateTitleInfo,
     openOathMenu,
     openReliefMenu
-} from './ui-manager.js?v=10.2.5';
+} from './ui-manager.js?v=10.2.6';
 
 // ==========================================
 // 通常クエスト

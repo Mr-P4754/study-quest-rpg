@@ -1,9 +1,9 @@
 // ============================================================================
 // STUDY QUEST RPG - Service Worker (sw.js)
-// Ver 10.2.5: PWA・オフラインファースト・静的アセット完全キャッシュ
+// Ver 10.2.6: PWA・オフラインファースト・静的アセット完全キャッシュ
 // ============================================================================
 
-const CACHE_NAME = 'sq-static-v10.2.5';
+const CACHE_NAME = 'sq-static-v10.2.6';
 
 // プレキャッシュ対象静的アセット一覧 (FR-03)
 const PRECACHE_ASSETS = [
@@ -12,24 +12,24 @@ const PRECACHE_ASSETS = [
     './manifest.json',
     './icons/icon-192.svg',
     './icons/icon-512.svg',
-    './css/base.css?v=10.2.5',
-    './css/layout.css?v=10.2.5',
-    './css/components.css?v=10.2.5',
-    './css/quests.css?v=10.2.5',
-    './css/special-quest.css?v=10.2.5',
-    './css/studyel.css?v=10.2.5',
-    './js/main.js?v=10.2.5',
-    './js/state.js?v=10.2.5',
-    './js/studyel-engine.js?v=10.2.5',
-    './js/utils.js?v=10.2.5',
-    './js/api.js?v=10.2.5',
-    './js/battle-core.js?v=10.2.5',
-    './js/quest-normal.js?v=10.2.5',
-    './js/quest-explore.js?v=10.2.5',
-    './js/gacha-shop.js?v=10.2.5',
-    './js/ui-manager.js?v=10.2.5',
-    './js/special-quest-engine.js?v=10.2.5',
-    './js/avatar-engine.js?v=10.2.5',
+    './css/base.css?v=10.2.6',
+    './css/layout.css?v=10.2.6',
+    './css/components.css?v=10.2.6',
+    './css/quests.css?v=10.2.6',
+    './css/special-quest.css?v=10.2.6',
+    './css/studyel.css?v=10.2.6',
+    './js/main.js?v=10.2.6',
+    './js/state.js?v=10.2.6',
+    './js/studyel-engine.js?v=10.2.6',
+    './js/utils.js?v=10.2.6',
+    './js/api.js?v=10.2.6',
+    './js/battle-core.js?v=10.2.6',
+    './js/quest-normal.js?v=10.2.6',
+    './js/quest-explore.js?v=10.2.6',
+    './js/gacha-shop.js?v=10.2.6',
+    './js/ui-manager.js?v=10.2.6',
+    './js/special-quest-engine.js?v=10.2.6',
+    './js/avatar-engine.js?v=10.2.6',
     'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js',
     'https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap'
 ];

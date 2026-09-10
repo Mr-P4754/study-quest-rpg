@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // js/battle-core.js (戦闘共通エンジン・UI更新・カットイン・リザルト)
 // ==========================================
 
@@ -11,7 +11,7 @@ import {
     runtimeState,
     LV_BONUS_RATE,
     saveGame
-} from './state.js?v=10.2.5';
+} from './state.js?v=10.2.6';
 
 import {
     getDisplayName,
@@ -21,12 +21,12 @@ import {
     stopBGM,
     isGradeMatch,
     renderSafeImg
-} from './utils.js?v=10.2.5';
+} from './utils.js?v=10.2.6';
 
 import {
     updateMissionProgress,
     checkTitles
-} from './gacha-shop.js?v=10.2.5';
+} from './gacha-shop.js?v=10.2.6';
 
 import {
     showAppModal,
@@ -34,9 +34,9 @@ import {
     showConfirm,
     updateTitleInfo,
     addCalcRecord
-} from './ui-manager.js?v=10.2.5';
+} from './ui-manager.js?v=10.2.6';
 
-import { cloudSync } from './api.js?v=10.2.5';
+import { cloudSync } from './api.js?v=10.2.6';
 
 export function showCutIn(t) { 
     const str = String(t);

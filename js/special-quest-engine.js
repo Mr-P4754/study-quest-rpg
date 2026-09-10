@@ -1,15 +1,15 @@
-/**
+﻿/**
  * ==========================================
  * js/special-quest/special-quest-engine.js
  * チームバトルクエスト（パーティー制バトル）エンジン
  * ==========================================
  */
 
-import { gameState, rawData, saveGame, runtimeState, RARITY_CAPS, LV_BONUS_RATE } from './state.js?v=10.2.5';
-import { getDisplayName, playSE, playBGM, stopBGM, updateMuteButtonsUI, ALL_GRADES, isGradeMatch, renderSafeImg } from './utils.js?v=10.2.5';
-import { closeAllCategoryModals, returnToCurrentCategory, showAlert, showConfirm } from './ui-manager.js?v=10.2.5';
-import { cloudSync } from './api.js?v=10.2.5';
-import { AVATAR_PARTS_DEF, AVATAR_MESSAGES, generateAvatarSvg } from './avatar-engine.js?v=10.2.5';
+import { gameState, rawData, saveGame, runtimeState, RARITY_CAPS, LV_BONUS_RATE } from './state.js?v=10.2.6';
+import { getDisplayName, playSE, playBGM, stopBGM, updateMuteButtonsUI, ALL_GRADES, isGradeMatch, renderSafeImg } from './utils.js?v=10.2.6';
+import { closeAllCategoryModals, returnToCurrentCategory, showAlert, showConfirm } from './ui-manager.js?v=10.2.6';
+import { cloudSync } from './api.js?v=10.2.6';
+import { AVATAR_PARTS_DEF, AVATAR_MESSAGES, generateAvatarSvg } from './avatar-engine.js?v=10.2.6';
 
 // ----------------------------------------------------
 // 内部状態管理 & コスト定義

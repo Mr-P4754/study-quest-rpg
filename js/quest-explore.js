@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // js/quest-explore.js (オープンワールド探索・オトモ連れ歩き統合エンジン Ver 2.2)
 // ==========================================
 
@@ -10,31 +10,31 @@ import {
     runtimeState,
     ROGUE_TILES,
     saveGame
-} from './state.js?v=10.2.5';
+} from './state.js?v=10.2.6';
 
 import {
     playSE,
     playBGM,
     isGradeMatch,
     renderSafeImg
-} from './utils.js?v=10.2.5';
+} from './utils.js?v=10.2.6';
 
 import {
     updateUI,
     startCountdown,
     getCharaStats,
     backToTitle
-} from './battle-core.js?v=10.2.5';
+} from './battle-core.js?v=10.2.6';
 
 import {
     showAppModal,
     showConfirm,
     updateTitleInfo
-} from './ui-manager.js?v=10.2.5';
+} from './ui-manager.js?v=10.2.6';
 
-import { cloudSync } from './api.js?v=10.2.5';
-import { generateAvatarSvg } from './avatar-engine.js?v=10.2.5';
-import { getStudyelSvgDataUri } from './studyel-engine.js?v=10.2.5';
+import { cloudSync } from './api.js?v=10.2.6';
+import { generateAvatarSvg } from './avatar-engine.js?v=10.2.6';
+import { getStudyelSvgDataUri } from './studyel-engine.js?v=10.2.6';
 
 // --- フィールド幾何・ゲームバランス定数 ---
 const MAP_SIZE = 1200;
@@ -64,8 +64,6 @@ let pendingRespawnCount = 0;
 // 入力状態
 const keysDown = {};
 let joystickVector = { x: 0, y: 0 };
-let isTouchMoving = false;
-let touchTargetPos = null;
 
 // キャッシュ済みグラフィックアセット
 let cachedAvatarImg = null;
@@ -381,7 +379,7 @@ function sampleSideAreaPos(start, goal, ux, uy, nx, ny) {
 }
 
 // ==========================================
-// 5. 操作入力システム (ジョイスティック + タッチ + PCキーボード)
+// 5. 操作入力システム (バーチャルジョイスティック + PCキーボード)
 // ==========================================
 
 function setupInputHandlers() {
@@ -468,40 +466,6 @@ function setupInputHandlers() {
         joyZone.addEventListener('touchend', resetJoy);
         joyZone.addEventListener('touchcancel', resetJoy);
     }
-
-    // Canvas直接タッチ/マウスクリック追従
-    const canvas = document.getElementById('rogue-canvas');
-    if (canvas) {
-        const handleCanvasPointer = (clientX, clientY, isDown) => {
-            if (!isDown) {
-                isTouchMoving = false;
-                touchTargetPos = null;
-                return;
-            }
-            const rect = canvas.getBoundingClientRect();
-            const touchCanvasX = clientX - rect.left;
-            const touchCanvasY = clientY - rect.top;
-            const cam = getCameraOffset(canvas);
-            touchTargetPos = {
-                x: touchCanvasX + cam.x,
-                y: touchCanvasY + cam.y
-            };
-            isTouchMoving = true;
-        };
-
-        canvas.addEventListener('touchstart', (e) => {
-            const touch = e.touches[0];
-            handleCanvasPointer(touch.clientX, touch.clientY, true);
-        }, { passive: true });
-
-        canvas.addEventListener('touchmove', (e) => {
-            const touch = e.touches[0];
-            handleCanvasPointer(touch.clientX, touch.clientY, true);
-        }, { passive: true });
-
-        canvas.addEventListener('touchend', () => handleCanvasPointer(0, 0, false));
-        canvas.addEventListener('touchcancel', () => handleCanvasPointer(0, 0, false));
-    }
 }
 
 // 後方互換性ラッパー（既存スクリプトや外部呼び出し対応）
@@ -569,7 +533,7 @@ function rogueGameLoop(now) {
 // ==========================================
 
 function updateRogueWorld(dt, now) {
-    // 1. 移動ベクトル計算 (ジョイスティック + キーボード + タッチ)
+    // 1. 移動ベクトル計算 (バーチャルジョイスティック + PCキーボード)
     let moveX = joystickVector.x;
     let moveY = joystickVector.y;
 
@@ -577,18 +541,6 @@ function updateRogueWorld(dt, now) {
     if (keysDown['arrowright'] || keysDown['d']) moveX += 1;
     if (keysDown['arrowup'] || keysDown['w']) moveY -= 1;
     if (keysDown['arrowdown'] || keysDown['s']) moveY += 1;
-
-    if (isTouchMoving && touchTargetPos) {
-        const tdx = touchTargetPos.x - rogueData.playerX;
-        const tdy = touchTargetPos.y - rogueData.playerY;
-        const tdist = Math.hypot(tdx, tdy);
-        if (tdist > 8) {
-            moveX += (tdx / tdist);
-            moveY += (tdy / tdist);
-        } else {
-            isTouchMoving = false;
-        }
-    }
 
     const mag = Math.hypot(moveX, moveY);
     if (mag > 0.05) {

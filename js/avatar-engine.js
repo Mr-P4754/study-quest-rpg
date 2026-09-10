@@ -1,10 +1,10 @@
-// ==========================================
+﻿// ==========================================
 // js/avatar-engine.js (アバター描画エンジン & UI制御)
 // ==========================================
 
-import { gameState, saveGame } from './state.js?v=10.2.5';
-import { closeAllCategoryModals, returnToCurrentCategory, showAlert, updateTitleInfo, updateCategoryBadges } from './ui-manager.js?v=10.2.5';
-import { playSE } from './utils.js?v=10.2.5';
+import { gameState, saveGame } from './state.js?v=10.2.6';
+import { closeAllCategoryModals, returnToCurrentCategory, showAlert, updateTitleInfo, updateCategoryBadges } from './ui-manager.js?v=10.2.6';
+import { playSE } from './utils.js?v=10.2.6';
 
 export const AVATAR_MESSAGES = [
     "よろしくお願いします！",

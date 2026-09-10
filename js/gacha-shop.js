@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // js/gacha-shop.js (ガチャ・図鑑・育成・ショップ・実績)
 // ==========================================
 
@@ -23,14 +23,14 @@ import {
     MISSIONS,
     MISSION_ALL_CLEAR,
     saveGame
-} from './state.js?v=10.2.5';
+} from './state.js?v=10.2.6';
 
 import {
     getRarityIndex,
     getDisplayName,
     playSE,
     renderSafeImg
-} from './utils.js?v=10.2.5';
+} from './utils.js?v=10.2.6';
 
 import {
     showAppModal,
@@ -41,7 +41,7 @@ import {
     returnToCurrentCategory,
     closeAllCategoryModals,
     updateCategoryBadges
-} from './ui-manager.js?v=10.2.5';
+} from './ui-manager.js?v=10.2.6';
 
 let selectedMaterials = {};
 let viewingCharaId = null;
