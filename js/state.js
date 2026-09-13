@@ -19,6 +19,8 @@ export const SELL_PRICES = { 'N': 250, 'R': 500, 'SR': 1000, 'SSR': 2000, 'UR': 
 export const LOGIN_BONUS_EXP = 30000;
 export const MAX_ITEM_LEVEL = 10;
 export const MASTER_COUNT = 10;
+export const FARM_DEFAULT_SLOTS = 3;
+export const FARM_MAX_SLOTS = 10;
 
 export const TITLES = [
     { id:'t01', name:'三日坊主卒業', req:'loginDays>=3', val:3, reward:30000, desc:'通算3日プレイ' },
@@ -390,7 +392,8 @@ export const rawData = {
     typing: [],
     randomBosses: [],
     config: [],
-    gifts: []
+    gifts: [],
+    heldItems: []
 };
 
 export const playData = { 
@@ -434,10 +437,25 @@ export const gameState = {
     timeLeft: 0,
     maxTime: 10, 
     xp: 0,
-    equipped: '1',
+    equippedParty: ['1', null, null],
+    unlockedSlots: 1,
+    // 旧コード後方互換プロパティ（メイン枠スロット0と常時双方向同期）
+    get equipped() {
+        return (this.equippedParty && this.equippedParty[0]) ? String(this.equippedParty[0]) : '1';
+    },
+    set equipped(val) {
+        if (!Array.isArray(this.equippedParty)) this.equippedParty = ['1', null, null];
+        this.equippedParty[0] = val ? String(val) : '1';
+    },
     itemLevels: {},
     charaInventory: {},
+    heldItemInventory: {},
     teamParty: [null, null, null],
+    farm: {
+        unlockedSlots: 3,
+        slots: [null, null, null, null, null, null, null, null, null, null],
+        totalCareCount: 0
+    },
     stats: {
         totalPlay: 0,
         totalKill: 0,
@@ -476,7 +494,8 @@ export const gameState = {
         outfit: 0,
         accessory: 0,
         msgId: 0
-    }
+    },
+    unlockedAvatars: []
 };
 
 /**
@@ -600,9 +619,52 @@ export function loadSaveData() {
     } catch(e) {
         gameState.xp = 0;
     }
-    gameState.equipped = localStorage.getItem('sq_equip') || '1';
-    gameState.itemLevels = safeParse('sq_items_v2', {});
-    gameState.charaInventory = safeParse('sq_inventory', {});
+    // スロット解放数および装備パーティーのロードとマイグレーション
+    const loadedSlots = parseInt(localStorage.getItem('sq_unlocked_slots') || '1', 10);
+    gameState.unlockedSlots = Math.min(3, Math.max(1, isNaN(loadedSlots) ? 1 : loadedSlots));
+
+    const loadedEquippedParty = safeParse('sq_equipped_party', null);
+    if (Array.isArray(loadedEquippedParty) && loadedEquippedParty.length === 3) {
+        gameState.equippedParty = [
+            (loadedEquippedParty[0] && gameState.charaInventory[loadedEquippedParty[0]]) ? String(loadedEquippedParty[0]) : (localStorage.getItem('sq_equip') || '1'),
+            (gameState.unlockedSlots >= 2 && loadedEquippedParty[1] && gameState.charaInventory[loadedEquippedParty[1]]) ? String(loadedEquippedParty[1]) : null,
+            (gameState.unlockedSlots >= 3 && loadedEquippedParty[2] && gameState.charaInventory[loadedEquippedParty[2]]) ? String(loadedEquippedParty[2]) : null
+        ];
+    } else {
+        const oldEquipped = localStorage.getItem('sq_equip') || '1';
+        gameState.equippedParty = [String(oldEquipped), null, null];
+    }
+
+    // ファーム（牧場）データのロードとマイグレーション
+    const loadedFarm = safeParse('sq_farm', null);
+    if (loadedFarm && typeof loadedFarm === 'object') {
+        const farmUnlocked = Math.min(FARM_MAX_SLOTS, Math.max(FARM_DEFAULT_SLOTS, parseInt(loadedFarm.unlockedSlots, 10) || FARM_DEFAULT_SLOTS));
+        const rawSlots = Array.isArray(loadedFarm.slots) ? loadedFarm.slots : [];
+        const slots = [];
+        for (let i = 0; i < FARM_MAX_SLOTS; i++) {
+            const charId = rawSlots[i];
+            if (charId && gameState.charaInventory && gameState.charaInventory[charId]) {
+                slots.push(String(charId));
+            } else {
+                slots.push(null);
+            }
+        }
+        gameState.farm = {
+            unlockedSlots: farmUnlocked,
+            slots: slots,
+            totalCareCount: Math.max(0, parseInt(loadedFarm.totalCareCount, 10) || 0)
+        };
+    } else {
+        gameState.farm = {
+            unlockedSlots: FARM_DEFAULT_SLOTS,
+            slots: Array(FARM_MAX_SLOTS).fill(null),
+            totalCareCount: 0
+        };
+    }
+
+    // 持ち物（HeldItems）データのロード
+    const loadedHeldItems = safeParse('sq_held_items', {});
+    gameState.heldItemInventory = (loadedHeldItems && typeof loadedHeldItems === 'object') ? loadedHeldItems : {};
     
     // 【多段自動復旧ネット】
     // もし charaInventory が空、または破損している場合、直近のバックアップまたは旧キーから復元を試行
@@ -617,12 +679,20 @@ export function loadSaveData() {
                     gameState.charaInventory = backup.charaInventory;
                     if (backup.xp && !gameState.xp) gameState.xp = parseInt(backup.xp, 10);
                     if (backup.itemLevels && (!gameState.itemLevels || Object.keys(gameState.itemLevels).length === 0)) gameState.itemLevels = backup.itemLevels;
-                    if (backup.equipped) gameState.equipped = String(backup.equipped);
+                    if (backup.unlockedSlots) gameState.unlockedSlots = Math.min(3, Math.max(1, parseInt(backup.unlockedSlots, 10) || 1));
+                    if (Array.isArray(backup.equippedParty)) {
+                        gameState.equippedParty = backup.equippedParty;
+                    } else if (backup.equipped) {
+                        gameState.equippedParty = [String(backup.equipped), null, null];
+                    }
                     if (backup.stats && (!gameState.stats || gameState.stats.totalPlay === 0)) gameState.stats = backup.stats;
                     if (backup.unlockedTitles && (!gameState.unlockedTitles || gameState.unlockedTitles.length === 0)) gameState.unlockedTitles = backup.unlockedTitles;
                     if (backup.inventory && (!gameState.inventory || gameState.inventory.redPages === 0)) gameState.inventory = backup.inventory;
+                    if (backup.farm && typeof backup.farm === 'object') gameState.farm = backup.farm;
+                    if (backup.heldItemInventory && typeof backup.heldItemInventory === 'object') gameState.heldItemInventory = backup.heldItemInventory;
                     // 復元した正常データをメインストレージへ再保存
                     localStorage.setItem('sq_inventory', JSON.stringify(gameState.charaInventory));
+                    localStorage.setItem('sq_held_items', JSON.stringify(gameState.heldItemInventory || {}));
                     localStorage.setItem('sq_xp', gameState.xp);
                     localStorage.setItem('sq_items_v2', JSON.stringify(gameState.itemLevels));
                 }
@@ -662,6 +732,7 @@ export function loadSaveData() {
                 if (typeof item.level !== 'number' || item.level < 1) item.level = 1;
                 if (typeof item.count !== 'number' || item.count < 1) item.count = 1;
                 if (typeof item.exp !== 'number' || item.exp < 0) item.exp = 0;
+                if (item.heldItem === undefined) item.heldItem = null;
             }
         });
     }
@@ -744,6 +815,10 @@ export function loadSaveData() {
         }, loadedAvatar);
     }
 
+    // アンロック済みアバターパーツIDリストのロード
+    const loadedUnlockedAvatars = safeParse('sq_unlocked_avatars', []);
+    gameState.unlockedAvatars = Array.isArray(loadedUnlockedAvatars) ? loadedUnlockedAvatars : [];
+
     if (typeof window !== 'undefined' && typeof window.StudyelEngine?.restoreCharacters === 'function') {
         window.StudyelEngine.restoreCharacters();
     }
@@ -759,10 +834,14 @@ export function saveGame() {
 
     // メインセーブデータの安全書き込み
     localStorage.setItem('sq_xp', gameState.xp);
-    localStorage.setItem('sq_equip', gameState.equipped);
+    localStorage.setItem('sq_equipped_party', JSON.stringify(gameState.equippedParty));
+    localStorage.setItem('sq_unlocked_slots', String(gameState.unlockedSlots || 1));
+    localStorage.setItem('sq_equip', (gameState.equippedParty && gameState.equippedParty[0]) ? gameState.equippedParty[0] : '1');
     localStorage.setItem('sq_items_v2', JSON.stringify(gameState.itemLevels));
     localStorage.setItem('sq_inventory', JSON.stringify(gameState.charaInventory));
+    localStorage.setItem('sq_held_items', JSON.stringify(gameState.heldItemInventory || {}));
     localStorage.setItem('sq_team_party', JSON.stringify(gameState.teamParty));
+    localStorage.setItem('sq_farm', JSON.stringify(gameState.farm));
     localStorage.setItem('sq_missions', JSON.stringify(dailyMissions));
     localStorage.setItem('sq_stats', JSON.stringify(gameState.stats));
     localStorage.setItem('sq_subject_stats', JSON.stringify(gameState.subjectStats || {}));
@@ -774,23 +853,29 @@ export function saveGame() {
     localStorage.setItem('sq_item_inventory', JSON.stringify(gameState.inventory));
     localStorage.setItem('sq_studyel', JSON.stringify(gameState.studyel));
     localStorage.setItem('sq_avatar', JSON.stringify(gameState.avatar));
+    localStorage.setItem('sq_unlocked_avatars', JSON.stringify(gameState.unlockedAvatars || []));
 
     // 【自動バックアップ二重保存】万一の破損時に備え、正常なセーブデータのスナップショットを別キーへ退避保存
     try {
         const backupSnapshot = {
             timestamp: Date.now(),
             xp: gameState.xp,
-            equipped: gameState.equipped,
+            equippedParty: gameState.equippedParty,
+            unlockedSlots: gameState.unlockedSlots,
+            equipped: (gameState.equippedParty && gameState.equippedParty[0]) ? gameState.equippedParty[0] : '1',
             itemLevels: gameState.itemLevels,
             charaInventory: gameState.charaInventory,
+            heldItemInventory: gameState.heldItemInventory || {},
             teamParty: gameState.teamParty,
+            farm: gameState.farm,
             stats: gameState.stats,
             subjectStats: gameState.subjectStats,
             unlockedTitles: gameState.unlockedTitles,
             claimedGifts: gameState.claimedGifts,
             inventory: gameState.inventory,
             studyel: gameState.studyel,
-            avatar: gameState.avatar
+            avatar: gameState.avatar,
+            unlockedAvatars: gameState.unlockedAvatars || []
         };
         localStorage.setItem('sq_save_backup', JSON.stringify(backupSnapshot));
     } catch (backupErr) {

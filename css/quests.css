@@ -106,7 +106,6 @@
 .chara-exp-cell { flex: 1; margin-left: 10px; }
 .chara-exp-subtext { font-size: 0.7em; text-align: right; }
 .chara-desc-box { font-size: 0.8em; color: #7f8c8d; margin: 10px 0; min-height: 3em; }
-.btn-equip-action { background: #2ecc71; border-bottom: 5px solid #27ae60; grid-column: span 2; }
 .btn-enhance-action { background: #e67e22; border-bottom: 5px solid #d35400; }
 .btn-sell-action { background: #95a5a6; border-bottom: 5px solid #7f8c8d; }
 

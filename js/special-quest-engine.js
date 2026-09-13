@@ -1,15 +1,16 @@
-﻿/**
+/**
  * ==========================================
  * js/special-quest/special-quest-engine.js
  * チームバトルクエスト（パーティー制バトル）エンジン
  * ==========================================
  */
 
-import { gameState, rawData, saveGame, runtimeState, RARITY_CAPS, LV_BONUS_RATE } from './state.js?v=10.2.6';
-import { getDisplayName, playSE, playBGM, stopBGM, updateMuteButtonsUI, ALL_GRADES, isGradeMatch, renderSafeImg } from './utils.js?v=10.2.6';
-import { closeAllCategoryModals, returnToCurrentCategory, showAlert, showConfirm } from './ui-manager.js?v=10.2.6';
-import { cloudSync } from './api.js?v=10.2.6';
-import { AVATAR_PARTS_DEF, AVATAR_MESSAGES, generateAvatarSvg } from './avatar-engine.js?v=10.2.6';
+import { gameState, rawData, saveGame, runtimeState, LV_BONUS_RATE } from './state.js?v=10.5.0';
+import { getDisplayName, playSE, playBGM, stopBGM, updateMuteButtonsUI, ALL_GRADES, isGradeMatch, renderSafeImg } from './utils.js?v=10.5.0';
+import { closeAllCategoryModals, returnToCurrentCategory, showAlert, showConfirm } from './ui-manager.js?v=10.5.0';
+import { cloudSync } from './api.js?v=10.5.0';
+import { AVATAR_PARTS_DEF, AVATAR_MESSAGES, generateAvatarSvg } from './avatar-engine.js?v=10.5.0';
+import { addFarmExp } from './farm-engine.js?v=10.5.0';
 
 // ----------------------------------------------------
 // 内部状態管理 & コスト定義
@@ -665,6 +666,27 @@ export function getTbCharaStats(partyMember) {
                 if (type === 'EXP') stats.exp = finalVal;
             }
         });
+    }
+
+    // 持ち物（HeldItems）によるステータス加算
+    if (userChara && userChara.heldItem && rawData.heldItems && rawData.heldItems.length > 0) {
+        const itemData = rawData.heldItems.find(it => String(it.id) === String(userChara.heldItem));
+        if (itemData) {
+            const itemVal = Number(itemData.value || 1.0);
+            const itemBonus = Math.max(0, itemVal - 1.0);
+            const itemType = itemData.type || 'ATK';
+            if (itemType === 'ALL') {
+                stats.atk += itemBonus;
+                stats.time += itemBonus;
+                stats.exp += itemBonus;
+            } else if (itemType === 'ATK') {
+                stats.atk += itemBonus;
+            } else if (itemType === 'TIME') {
+                stats.time += itemBonus;
+            } else if (itemType === 'EXP') {
+                stats.exp += itemBonus;
+            }
+        }
     }
 
     // ショップ装備アイテムによるステータス加算（通常クエストと同様）
@@ -1497,6 +1519,9 @@ export function judgeTbAnswer(selectedChoice, buttonElement) {
         // 正解！自陣から敵への攻撃
         playSE('hit');
         tbState.score += 100;
+
+        // ファーム（牧場）EXP分配
+        addFarmExp(q);
 
         // 通常クエストと完全共通化されたステータス補正計算
         const stats = getTbCharaStats(activePlayer);

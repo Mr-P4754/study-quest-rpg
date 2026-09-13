@@ -153,6 +153,104 @@ button { cursor: pointer; font-family: inherit; -webkit-user-select: none; user-
     animation: damagePopFloat 1.2s ease-out forwards;
 }
 
+/* 必殺技専用カットイン（上段：技名、下段：効果値・被り防止2段構造） */
+.cutin-skill-container {
+    position: fixed;
+    top: 38%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    z-index: 2500;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
+    animation: skillCutinPopFloat 1.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    text-align: center;
+    width: 95vw;
+    max-width: 600px;
+}
+
+.cutin-skill-banner {
+    font-family: 'BIZ UDPGothic', sans-serif;
+    font-size: clamp(1.8rem, 6vmin, 3.2rem);
+    font-weight: 900;
+    color: #fff3bf;
+    -webkit-text-stroke: clamp(1.8px, 0.6vmin, 3.5px) #9a3412;
+    text-shadow:
+        0 0 25px rgba(245, 158, 11, 0.95),
+        0 4px 15px rgba(0, 0, 0, 0.85),
+        3px 3px 0 #7c2d12,
+        -2px -2px 0 #7c2d12;
+    line-height: 1.1;
+    white-space: nowrap;
+    letter-spacing: 2px;
+}
+
+.cutin-skill-value {
+    font-family: 'BIZ UDPGothic', sans-serif;
+    font-size: clamp(2.6rem, 8.5vmin, 4.8rem);
+    font-weight: 900;
+    line-height: 1.05;
+    white-space: nowrap;
+}
+
+/* ダメージ（ATK: パワースマッシュ） */
+.cutin-skill-value.cutin-skill-damage {
+    color: #ffda79;
+    -webkit-text-stroke: clamp(2px, 0.7vmin, 4.5px) #80150b;
+    text-shadow:
+        0 4px 25px rgba(255, 82, 82, 0.95),
+        0 0 40px rgba(239, 68, 68, 0.7),
+        3px 3px 0 #4a0d07,
+        -2px -2px 0 #4a0d07;
+}
+
+/* 時間回復（TIME: タイムリカバリー） */
+.cutin-skill-value.cutin-skill-heal {
+    color: #6ee7b7;
+    -webkit-text-stroke: clamp(2px, 0.7vmin, 4.5px) #064e3b;
+    text-shadow:
+        0 0 30px rgba(52, 211, 153, 0.95),
+        0 4px 20px rgba(0, 0, 0, 0.85),
+        3px 3px 0 #022c22,
+        -2px -2px 0 #022c22;
+}
+
+/* XPボーナス（EXP: ラッキーボーナス） */
+.cutin-skill-value.cutin-skill-exp {
+    color: #fde047;
+    -webkit-text-stroke: clamp(2px, 0.7vmin, 4.5px) #78350f;
+    text-shadow:
+        0 0 30px rgba(234, 179, 8, 0.95),
+        0 4px 20px rgba(0, 0, 0, 0.85),
+        3px 3px 0 #451a03,
+        -2px -2px 0 #451a03;
+}
+
+/* 全属性（ALL: ミラクルバースト） */
+.cutin-skill-value.cutin-skill-all {
+    font-size: clamp(1.5rem, 4.8vmin, 2.8rem);
+    color: #e0e7ff;
+    -webkit-text-stroke: clamp(1.5px, 0.5vmin, 3px) #312e81;
+    text-shadow:
+        0 0 30px rgba(129, 140, 248, 0.95),
+        0 4px 18px rgba(0, 0, 0, 0.85),
+        3px 3px 0 #1e1b4b,
+        -2px -2px 0 #1e1b4b;
+}
+
+@keyframes skillCutinPopFloat {
+    0% { transform: translate(-50%, -35%) scale(0.4); opacity: 0; }
+    18% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+    30% { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
+    75% { transform: translate(-50%, -55%) scale(1.0); opacity: 1; }
+    100% { transform: translate(-50%, -85%) scale(0.9); opacity: 0; }
+}
+
 .header { padding: 5px 10px; background: #34495e; border-bottom: 4px solid #2c3e50; display: flex; justify-content: space-between; align-items: center; height: 55px; box-shadow: 0 4px 0 rgba(0,0,0,0.2); z-index: 20; flex-shrink: 0; gap: 8px; width: 100%; }
 .life-container { font-size: 1.2em; color: #e74c3c; letter-spacing: 1px; flex-shrink: 0; }
 .timer-container { flex-grow: 1; background: #444; height: 16px; position: relative; border: 2px solid #fff; border-radius: 8px; overflow: hidden; box-shadow: inset 0 0 5px rgba(0,0,0,0.5); }

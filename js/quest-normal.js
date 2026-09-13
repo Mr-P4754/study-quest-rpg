@@ -1,4 +1,4 @@
-﻿// ==========================================
+// ==========================================
 // js/quest-normal.js (通常・サバイバル・計算・タイピング・リベンジ進行)
 // ==========================================
 
@@ -9,17 +9,14 @@ import {
     rogueData,
     runtimeState,
     saveGame
-} from './state.js?v=10.2.6';
+} from './state.js?v=10.5.0';
 
 import {
-    getGradeMultiplier,
     generateCalcQuestion,
     playSE,
-    playBGM,
-    stopBGM,
     isGradeMatch,
     renderSafeImg
-} from './utils.js?v=10.2.6';
+} from './utils.js?v=10.5.0';
 
 import {
     showCutIn,
@@ -27,22 +24,23 @@ import {
     startCountdown,
     startTimer,
     getCharaStats,
-    finishGame
-} from './battle-core.js?v=10.2.6';
+    finishGame,
+    addSP,
+    updateSpUI,
+    applyBattleStartHeldItemBuffs
+} from './battle-core.js?v=10.5.0';
 
 import {
-    updateMissionProgress,
-    checkTitles
-} from './gacha-shop.js?v=10.2.6';
+    updateMissionProgress
+} from './gacha-shop.js?v=10.5.0';
 
 import {
-    showAppModal,
-    showAlert,
-    showConfirm,
     updateTitleInfo,
     openOathMenu,
     openReliefMenu
-} from './ui-manager.js?v=10.2.6';
+} from './ui-manager.js?v=10.5.0';
+
+import { addFarmExp } from './farm-engine.js?v=10.5.0';
 
 // ==========================================
 // 通常クエスト
@@ -156,6 +154,8 @@ export function startGame() {
     gameState.maxTime = baseTime * charaStats.time;
     runtimeState.isGameActive = false; 
     runtimeState.isPaused = false;
+    applyBattleStartHeldItemBuffs();
+    playData.bonusExp = 0;
     if (typeof window !== 'undefined' && typeof window.StudyelEngine?.resetBattleFlags === 'function') {
         window.StudyelEngine.resetBattleFlags();
     }
@@ -275,6 +275,13 @@ export function judge(isCorrect, btn) {
 
     if(isCorrect) {
         playSE('hit');
+
+        // ファーム（牧場）EXP分配（サバイバル・計算・探索モード時はスキップ）
+        if (!playData.isSurvival && !playData.isCalculation && !(typeof rogueData !== 'undefined' && rogueData.active)) {
+            const targetQ = playData.isTyping ? playData.typingTarget : playData.currentQ;
+            addFarmExp(targetQ);
+        }
+
         if (playData.isRevenge && playData.currentQ && playData.currentQ.id) { 
             gameState.revengeList = gameState.revengeList.filter(id => String(id) !== String(playData.currentQ.id)); 
             saveGame(); 
@@ -309,6 +316,9 @@ export function judge(isCorrect, btn) {
         }
         
         gameState.combo++; 
+        if (gameState.combo > 0 && gameState.combo % 5 === 0) {
+            addSP(1);
+        }
         gameState.stats.totalCorrect = (gameState.stats.totalCorrect || 0) + 1; 
         gameState.stats.maxCombo = Math.max(gameState.stats.maxCombo || 0, gameState.combo);
         if ((gameState.maxTime - gameState.timeLeft) <= 1.0) { 
@@ -435,6 +445,9 @@ export async function startSurvivalGame() {
     gameState.timeLeft = gameState.maxTime;
     runtimeState.isGameActive = false; 
     runtimeState.isPaused = false;
+    playData.currentSP = 0;
+    playData.bonusExp = 0;
+    updateSpUI();
     
     document.getElementById('survival-overlay')?.classList.add('hidden');
     document.getElementById('oath-overlay')?.classList.add('hidden'); 
@@ -574,6 +587,9 @@ export async function startRandomGame() {
     gameState.maxTime = baseTime * charaStats.time;
     runtimeState.isGameActive = false; 
     runtimeState.isPaused = false;
+    playData.currentSP = 0;
+    playData.bonusExp = 0;
+    updateSpUI();
     if (typeof window !== 'undefined' && typeof window.StudyelEngine?.resetBattleFlags === 'function') {
         window.StudyelEngine.resetBattleFlags();
     }
@@ -726,6 +742,9 @@ export function startTypingGame() {
     gameState.maxTime = baseTime * charaStats.time; 
     runtimeState.isGameActive = false; 
     runtimeState.isPaused = false;
+    playData.currentSP = 0;
+    playData.bonusExp = 0;
+    updateSpUI();
     
     document.getElementById('typing-menu-overlay')?.classList.add('hidden'); 
     document.getElementById('title-screen')?.classList.add('hidden'); 
@@ -913,6 +932,8 @@ export function handleTypingInput(e) {
             if (typeof window !== 'undefined' && typeof window.StudyelEngine?.onAnswer === 'function') {
                 window.StudyelEngine.onAnswer(true, playData.typingTarget);
             }
+            // ファーム（牧場）EXP分配
+            addFarmExp(playData.typingTarget);
             const stats = getCharaStats(); 
             const baseAtk = 100; 
             const rawRatio = gameState.timeLeft / gameState.maxTime; 
@@ -926,6 +947,9 @@ export function handleTypingInput(e) {
             gameState.enemyHP = Math.max(0, gameState.enemyHP - damage); 
             gameState.score += damage; 
             gameState.combo++; 
+            if (gameState.combo > 0 && gameState.combo % 5 === 0) {
+                addSP(1);
+            }
             showCutIn("-" + damage);
             gameState.stats.totalCorrect = (gameState.stats.totalCorrect || 0) + 1;
             gameState.stats.maxCombo = Math.max(gameState.stats.maxCombo || 0, gameState.combo);

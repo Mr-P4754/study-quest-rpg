@@ -1,9 +1,9 @@
 // ============================================================================
 // STUDY QUEST RPG - Service Worker (sw.js)
-// Ver 10.2.6: PWA・オフラインファースト・静的アセット完全キャッシュ
+// Ver 10.5.0: 持ち物機能＆持ち物ガチャ対応
 // ============================================================================
 
-const CACHE_NAME = 'sq-static-v10.2.6';
+const CACHE_NAME = 'sq-static-v10.5.0';
 
 // プレキャッシュ対象静的アセット一覧 (FR-03)
 const PRECACHE_ASSETS = [
@@ -12,24 +12,25 @@ const PRECACHE_ASSETS = [
     './manifest.json',
     './icons/icon-192.svg',
     './icons/icon-512.svg',
-    './css/base.css?v=10.2.6',
-    './css/layout.css?v=10.2.6',
-    './css/components.css?v=10.2.6',
-    './css/quests.css?v=10.2.6',
-    './css/special-quest.css?v=10.2.6',
-    './css/studyel.css?v=10.2.6',
-    './js/main.js?v=10.2.6',
-    './js/state.js?v=10.2.6',
-    './js/studyel-engine.js?v=10.2.6',
-    './js/utils.js?v=10.2.6',
-    './js/api.js?v=10.2.6',
-    './js/battle-core.js?v=10.2.6',
-    './js/quest-normal.js?v=10.2.6',
-    './js/quest-explore.js?v=10.2.6',
-    './js/gacha-shop.js?v=10.2.6',
-    './js/ui-manager.js?v=10.2.6',
-    './js/special-quest-engine.js?v=10.2.6',
-    './js/avatar-engine.js?v=10.2.6',
+    './css/base.css?v=10.5.0',
+    './css/layout.css?v=10.5.0',
+    './css/components.css?v=10.5.0',
+    './css/quests.css?v=10.5.0',
+    './css/special-quest.css?v=10.5.0',
+    './css/studyel.css?v=10.5.0',
+    './js/main.js?v=10.5.0',
+    './js/state.js?v=10.5.0',
+    './js/studyel-engine.js?v=10.5.0',
+    './js/utils.js?v=10.5.0',
+    './js/api.js?v=10.5.0',
+    './js/battle-core.js?v=10.5.0',
+    './js/quest-normal.js?v=10.5.0',
+    './js/quest-explore.js?v=10.5.0',
+    './js/gacha-shop.js?v=10.5.0',
+    './js/ui-manager.js?v=10.5.0',
+    './js/special-quest-engine.js?v=10.5.0',
+    './js/avatar-engine.js?v=10.5.0',
+    './js/farm-engine.js?v=10.5.0',
     'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js',
     'https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap'
 ];
@@ -42,7 +43,6 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then(async (cache) => {
             console.log('[SW] プレキャッシュ開始:', CACHE_NAME);
-            // 外部CDNや一部ファイルが通信失敗しても全体が壊れないよう個別に安全格納
             for (const asset of PRECACHE_ASSETS) {
                 try {
                     await cache.add(asset);
@@ -76,9 +76,9 @@ self.addEventListener('activate', (event) => {
 
 /**
  * フェッチ制御イベント (FR-04, FR-05)
- * - GAS API 通信 (script.google.com, Googleドライブ, action/gradeパラメータ) は完全バイパス (FR-05)
- * - 静的アセットは Cache First, Network Fallback (FR-04)
- * - オフライン時のナビゲーション要求には index.html をフォールバック返却 (FR-04)
+ * - GAS API 通信は完全バイパス (FR-05)
+ * - JS/CSS/ナビゲーションは Network First（最新コード優先＆フォールバックキャッシュ）
+ * - その他画像・フォントは Cache First
  */
 self.addEventListener('fetch', (event) => {
     const req = event.request;
@@ -86,10 +86,7 @@ self.addEventListener('fetch', (event) => {
 
     const url = new URL(req.url);
 
-    // ============================================================
-    // 【FR-05: GAS API通信の物理的除外（バイパス）】
-    // 既存の IndexedDB SWR キャッシュおよび CloudSyncQueue に委託
-    // ============================================================
+    // GAS API 通信の物理的除外（バイパス）
     if (
         url.hostname.includes('script.google.com') ||
         url.hostname.includes('script.googleusercontent.com') ||
@@ -97,13 +94,10 @@ self.addEventListener('fetch', (event) => {
         url.searchParams.has('action') ||
         url.searchParams.has('grade')
     ) {
-        // SW は介入せず、通常のブラウザネットワーク通信に任せる
         return;
     }
 
-    // ============================================================
-    // ナビゲーションリクエスト（画面遷移 / アプリ起動） (FR-04)
-    // ============================================================
+    // ナビゲーションリクエスト（index.html 読み込み）
     if (req.mode === 'navigate') {
         event.respondWith(
             fetch(req)
@@ -115,7 +109,6 @@ self.addEventListener('fetch', (event) => {
                     return networkRes;
                 })
                 .catch(async () => {
-                    console.log('[SW] ナビゲーションオフライン検知: index.html をフォールバック返却');
                     const cached = await caches.match('./index.html') ||
                                    await caches.match('./') ||
                                    await caches.match(req);
@@ -125,37 +118,44 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // ============================================================
-    // 静的アセット（HTML, CSS, JS, 画像, フォント等） (FR-04)
-    // キャッシュファースト ➔ ネットワークフォールバック ➔ 動的キャッシュ保存
-    // ============================================================
-    event.respondWith(
-        caches.match(req).then((cachedRes) => {
-            if (cachedRes) {
-                return cachedRes;
-            }
-
-            // キャッシュ未ヒット時はネットワーク取得
-            return fetch(req)
+    // スクリプト（JS）およびスタイル（CSS）は Network First で取得し、キャッシュ不整合を根絶
+    const isScriptOrStyle = url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname.includes('/js/') || url.pathname.includes('/css/');
+    if (isScriptOrStyle) {
+        event.respondWith(
+            fetch(req)
                 .then((networkRes) => {
-                    // 正常なレスポンス（または CORS opaque レスポンス）のみキャッシュ
                     if (networkRes && (networkRes.status === 200 || networkRes.type === 'opaque')) {
                         const resClone = networkRes.clone();
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(req, resClone).catch(() => {});
-                        });
+                        caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone).catch(() => {}));
                     }
                     return networkRes;
                 })
-                .catch(async (fetchErr) => {
-                    // クエリパラメータの差異（例: ?ts=... や ?v=...）に対応する柔軟フォールバック検索
+                .catch(async () => {
+                    // オフライン時はキャッシュから返却
+                    const cached = await caches.match(req);
+                    if (cached) return cached;
                     const urlWithoutQuery = req.url.split('?')[0];
-                    const fallbackMatch = await caches.match(urlWithoutQuery);
-                    if (fallbackMatch) {
-                        return fallbackMatch;
+                    return await caches.match(urlWithoutQuery) || new Response('', { status: 408 });
+                })
+        );
+        return;
+    }
+
+    // 画像・フォント等は Cache First
+    event.respondWith(
+        caches.match(req).then((cachedRes) => {
+            if (cachedRes) return cachedRes;
+            return fetch(req)
+                .then((networkRes) => {
+                    if (networkRes && (networkRes.status === 200 || networkRes.type === 'opaque')) {
+                        const resClone = networkRes.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone).catch(() => {}));
                     }
-                    // 画像等のフォールバック
-                    return new Response('', { status: 408, statusText: 'Request Timed Out' });
+                    return networkRes;
+                })
+                .catch(async () => {
+                    const urlWithoutQuery = req.url.split('?')[0];
+                    return await caches.match(urlWithoutQuery) || new Response('', { status: 408 });
                 });
         })
     );

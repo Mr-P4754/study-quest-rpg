@@ -1,9 +1,9 @@
-﻿// ==========================================
+// ==========================================
 // js/api.js (GASバックエンド通信・クラウド同期)
 // ==========================================
 
-import { API_URL, rawData, gameState, dailyMissions, runtimeState, saveGame } from './state.js?v=10.2.6';
-import { isGradeMatch, ALL_GRADES } from './utils.js?v=10.2.6';
+import { API_URL, rawData, gameState, dailyMissions, runtimeState, saveGame, FARM_DEFAULT_SLOTS, FARM_MAX_SLOTS } from './state.js?v=10.5.0';
+import { isGradeMatch, ALL_GRADES } from './utils.js?v=10.5.0';
 
 // ==========================================
 // IndexedDB スマートキャッシュマネージャー
@@ -259,9 +259,12 @@ export function createSavePayload() {
         userId: String(rawUserId).trim(),
         data: {
             xp: Number(gameState.xp) || 0,
-            equipped: String(gameState.equipped || '1'),
+            equippedParty: Array.isArray(gameState.equippedParty) ? gameState.equippedParty : [String(gameState.equipped || '1'), null, null],
+            unlockedSlots: Number(gameState.unlockedSlots) || 1,
+            equipped: String((gameState.equippedParty && gameState.equippedParty[0]) || gameState.equipped || '1'),
             itemLevels: gameState.itemLevels || {},
             charaInventory: gameState.charaInventory || {},
+            heldItemInventory: gameState.heldItemInventory || {},
             teamParty: Array.isArray(gameState.teamParty) ? gameState.teamParty : [null, null, null],
             missions: dailyMissions || {},
             stats: gameState.stats || {},
@@ -273,7 +276,9 @@ export function createSavePayload() {
             inventory: gameState.inventory || {},
             calcRecords: gameState.calcRecords || {},
             studyel: gameState.studyel || {},
-            avatar: gameState.avatar || {}
+            farm: gameState.farm || { unlockedSlots: FARM_DEFAULT_SLOTS, slots: Array(FARM_MAX_SLOTS).fill(null), totalCareCount: 0 },
+            avatar: gameState.avatar || {},
+            unlockedAvatars: Array.isArray(gameState.unlockedAvatars) ? gameState.unlockedAvatars : []
         }
     };
 }
@@ -604,17 +609,29 @@ export async function downloadData() {
             };
 
             gameState.xp = parseInt(data.xp || 0, 10);
-            gameState.equipped = String(data.equipped || '1');
+            gameState.unlockedSlots = Math.min(3, Math.max(1, parseInt(data.unlockedSlots, 10) || 1));
+            if (Array.isArray(data.equippedParty) && data.equippedParty.length === 3) {
+                gameState.equippedParty = [
+                    data.equippedParty[0] ? String(data.equippedParty[0]) : '1',
+                    (gameState.unlockedSlots >= 2 && data.equippedParty[1]) ? String(data.equippedParty[1]) : null,
+                    (gameState.unlockedSlots >= 3 && data.equippedParty[2]) ? String(data.equippedParty[2]) : null
+                ];
+            } else {
+                gameState.equippedParty = [String(data.equipped || '1'), null, null];
+            }
+            gameState.equipped = String(gameState.equippedParty[0] || '1');
             gameState.itemLevels = forceObj(data.itemLevels);
             gameState.charaInventory = forceObj(data.charaInventory);
+            gameState.heldItemInventory = forceObj(data.heldItemInventory);
 
-            // インベントリの最低レベル・個数補正
+            // インベントリの最低レベル・個数補正および持ち物初期化
             Object.keys(gameState.charaInventory).forEach(id => {
                 const item = gameState.charaInventory[id];
                 if (item) {
                     if (typeof item.level !== 'number' || item.level < 1) item.level = 1;
                     if (typeof item.count !== 'number' || item.count < 1) item.count = 1;
                     if (typeof item.exp !== 'number' || item.exp < 0) item.exp = 0;
+                    if (item.heldItem === undefined) item.heldItem = null;
                 }
             });
 
@@ -652,6 +669,31 @@ export async function downloadData() {
 
             if (data.avatar) {
                 gameState.avatar = forceObj(data.avatar);
+            }
+
+            if (data.unlockedAvatars) {
+                gameState.unlockedAvatars = forceArr(data.unlockedAvatars);
+                localStorage.setItem('sq_unlocked_avatars', JSON.stringify(gameState.unlockedAvatars));
+            }
+
+            if (data.farm) {
+                const fData = forceObj(data.farm);
+                const farmUnlocked = Math.min(FARM_MAX_SLOTS, Math.max(FARM_DEFAULT_SLOTS, parseInt(fData.unlockedSlots, 10) || FARM_DEFAULT_SLOTS));
+                const rawFarmSlots = Array.isArray(fData.slots) ? fData.slots : [];
+                const farmSlots = [];
+                for (let i = 0; i < FARM_MAX_SLOTS; i++) {
+                    const cId = rawFarmSlots[i];
+                    if (cId && gameState.charaInventory && gameState.charaInventory[cId]) {
+                        farmSlots.push(String(cId));
+                    } else {
+                        farmSlots.push(null);
+                    }
+                }
+                gameState.farm = {
+                    unlockedSlots: farmUnlocked,
+                    slots: farmSlots,
+                    totalCareCount: Math.max(0, parseInt(fData.totalCareCount, 10) || 0)
+                };
             }
 
             // ユーザーIDの確実な保存
@@ -1247,6 +1289,44 @@ export async function fetchData() {
                 }
             });
         }
+
+        // 10. 持ち物マスター (heldItems)
+        rawData.heldItems = [];
+        const rawHeld = Array.isArray(data.heldItems) ? data.heldItems : [];
+        rawData.heldItems = rawHeld.map(item => {
+            const strId = String(item.ID !== undefined ? item.ID : (item.id !== undefined ? item.id : ''));
+            const name = String(item['アイテム名'] || item['名前'] || item.name || 'Item');
+            const rarity = String(item['レア'] || item.rarity || 'N');
+            const type = String(item['タイプ'] || item.type || 'ATK');
+            const val = Number(item['効果値'] !== undefined ? item['効果値'] : (item.value !== undefined ? item.value : (item['補正値'] !== undefined ? item['補正値'] : 1.0)));
+            const special = String(item['特殊効果'] || item.special || '');
+            const desc = String(item['説明'] || item['解説'] || item.desc || '');
+            const category = String(item['カテゴリ'] || item.category || '持ち物');
+            const imgUrl = convertDriveUrl(item['画像URL'] || item.imageUrl || item.image || item.icon || '');
+
+            return {
+                ...item,
+                id: strId,
+                ID: strId,
+                name: name,
+                'アイテム名': name,
+                '名前': name,
+                rarity: rarity,
+                'レア': rarity,
+                type: type,
+                'タイプ': type,
+                value: val,
+                '効果値': val,
+                special: special,
+                '特殊効果': special,
+                desc: desc,
+                '説明': desc,
+                category: category,
+                'カテゴリ': category,
+                imageUrl: imgUrl,
+                '画像URL': imgUrl
+            };
+        });
 
         // ゼロ埋めエイリアス（"001" -> "1"）の解決マップを生成
         normalizeCharacterDictionary();

@@ -1,4 +1,4 @@
-﻿// ==========================================
+// ==========================================
 // js/battle-core.js (戦闘共通エンジン・UI更新・カットイン・リザルト)
 // ==========================================
 
@@ -6,12 +6,12 @@ import {
     gameState,
     playData,
     rawData,
-    dailyMissions,
     rogueData,
     runtimeState,
     LV_BONUS_RATE,
+    RARITY_CAPS,
     saveGame
-} from './state.js?v=10.2.6';
+} from './state.js?v=10.5.0';
 
 import {
     getDisplayName,
@@ -21,22 +21,21 @@ import {
     stopBGM,
     isGradeMatch,
     renderSafeImg
-} from './utils.js?v=10.2.6';
+} from './utils.js?v=10.5.0';
 
 import {
     updateMissionProgress,
     checkTitles
-} from './gacha-shop.js?v=10.2.6';
+} from './gacha-shop.js?v=10.5.0';
 
 import {
     showAppModal,
-    showAlert,
     showConfirm,
     updateTitleInfo,
     addCalcRecord
-} from './ui-manager.js?v=10.2.6';
+} from './ui-manager.js?v=10.5.0';
 
-import { cloudSync } from './api.js?v=10.2.6';
+import { cloudSync } from './api.js?v=10.5.0';
 
 export function showCutIn(t) { 
     const str = String(t);
@@ -60,6 +59,31 @@ export function showCutIn(t) {
     setTimeout(() => d.remove(), 1300); 
 }
 
+/**
+ * 必殺技（アクティブスキル）専用の上下2段カットイン演出（文字被り防止・可読性最適化）
+ * @param {string} skillTitle 技名（例: '⚡ ラッキーボーナス！'）
+ * @param {string} effectText 効果値（例: '+200 XP', '-500 HP'）
+ * @param {'damage'|'heal'|'exp'|'all'} effectType 効果の属性
+ */
+export function showSkillCutIn(skillTitle, effectText, effectType = 'damage') {
+    const container = document.createElement('div');
+    container.className = 'cutin-skill-container';
+
+    const banner = document.createElement('div');
+    banner.className = 'cutin-skill-banner';
+    banner.innerText = skillTitle;
+
+    const value = document.createElement('div');
+    value.className = `cutin-skill-value cutin-skill-${effectType}`;
+    value.innerText = effectText;
+
+    container.appendChild(banner);
+    container.appendChild(value);
+
+    document.body.appendChild(container);
+    setTimeout(() => container.remove(), 1400);
+}
+
 export function updateUI() { 
     const uiLife = document.getElementById('ui-life'); 
     if(uiLife) uiLife.innerText = '❤️'.repeat(Math.max(0, gameState.lives)); 
@@ -80,19 +104,44 @@ export function togglePause() {
     if(runtimeState.isPaused) {
         const infoBox = document.getElementById('pause-chara-info');
         if(!infoBox) return;
-        const charaId = gameState.equipped;
-        const chara = rawData.characters ? rawData.characters.find(c => String(c.id) == String(charaId)) : null;
-        if(chara) {
-            const inv = gameState.charaInventory[charaId] || (gameState.charaInventory[chara.id] || { level: 1 });
-            const baseVal = (inv.isEvolved && inv.customValue) ? inv.customValue : chara.value;
-            const r = inv.currentRarity || chara.rarity;
-            const name = getDisplayName(chara, inv);
+        const party = Array.isArray(gameState.equippedParty) ? gameState.equippedParty : [(gameState.equipped || '1'), null, null];
+        const mainId = party[0] || '1';
+        const mainChara = rawData.characters ? rawData.characters.find(c => String(c.id) == String(mainId)) : null;
+
+        // 最大3体のミニアイコン（30px）を並べて表示
+        let iconsHtml = '<div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">';
+        for (let slotIdx = 0; slotIdx < 3; slotIdx++) {
+            const isUnlocked = slotIdx < (Number(gameState.unlockedSlots) || 1);
+            const cId = party[slotIdx];
+            const c = cId && rawData.characters ? rawData.characters.find(x => String(x.id) === String(cId)) : null;
+            if (!isUnlocked) {
+                iconsHtml += '<div style="width:30px; height:30px; border-radius:6px; background:#34495e; display:flex; align-items:center; justify-content:center; font-size:14px; opacity:0.5;" title="未解放スロット">🔒</div>';
+            } else if (c) {
+                const img = (c.imageUrl && (c.imageUrl.startsWith('http') || c.imageUrl.startsWith('data:image')))
+                    ? renderSafeImg(c.imageUrl, '✏️', '', 'width:30px; height:30px; object-fit:cover; border-radius:6px; background:#fff; border:1px solid #f39c12;')
+                    : '<div style="width:30px; height:30px; border-radius:6px; background:#fff; border:1px solid #f39c12; display:flex; align-items:center; justify-content:center; font-size:16px;">✏️</div>';
+                iconsHtml += img;
+            } else {
+                iconsHtml += '<div style="width:30px; height:30px; border-radius:6px; background:rgba(255,255,255,0.1); border:1px dashed #7f8c8d; display:flex; align-items:center; justify-content:center; font-size:11px; color:#bdc3c7;" title="空きスロット">空</div>';
+            }
+        }
+        iconsHtml += '</div>';
+
+        if(mainChara) {
+            const inv = (gameState.charaInventory && gameState.charaInventory[mainId]) || (gameState.charaInventory && gameState.charaInventory[mainChara.id]) || { level: 1 };
+            const baseVal = (inv.isEvolved && inv.customValue) ? inv.customValue : mainChara.value;
+            const r = inv.currentRarity || mainChara.rarity;
+            const name = getDisplayName(mainChara, inv);
             let val = Number(baseVal) + (inv.level * LV_BONUS_RATE);
-            let visual = (chara.imageUrl && (chara.imageUrl.startsWith('http') || chara.imageUrl.startsWith('data:image'))) 
-                ? renderSafeImg(chara.imageUrl, '✏️', '', 'width:60px;height:60px;object-fit:contain;background:#fff;border-radius:5px;')
-                : `<div style="font-size:40px;">✏️</div>`;
-            infoBox.innerHTML = `<div style="display:flex; align-items:center; gap:10px; text-align:left;">${visual}<div><div style="font-weight:bold; color:#ecf0f1; font-size:0.9em;">${name}</div><div style="color:#f39c12; font-weight:bold; font-size:0.8em;">Lv.${inv.level}</div><div style="font-size:0.7em; color:#bdc3c7;"><span class="rarity-${r}" style="font-weight:bold; font-size:1.2em; margin-right:5px;">${r}</span>効果: x${val.toFixed(2)}</div></div></div>`;
-        } else { infoBox.innerHTML = `<div style="color:#bdc3c7; font-size:0.8em;">装備なし</div>`; }
+            infoBox.innerHTML = `
+                ${iconsHtml}
+                <div style="text-align:left;">
+                    <div style="font-weight:bold; color:#ecf0f1; font-size:0.9em;">${name}</div>
+                    <div style="color:#f39c12; font-weight:bold; font-size:0.8em;">Lv.${inv.level}</div>
+                    <div style="font-size:0.7em; color:#bdc3c7;"><span class="rarity-${r}" style="font-weight:bold; font-size:1.2em; margin-right:5px;">${r}</span>メイン効果: x${val.toFixed(2)}</div>
+                </div>
+            `;
+        } else { infoBox.innerHTML = `${iconsHtml}<div style="color:#bdc3c7; font-size:0.8em;">装備なし</div>`; }
     }
 }
 
@@ -251,6 +300,35 @@ export function startTimer() {
             }
         }
 
+        // 持ち物PINCH_SHIELD判定（ライフ1＆残り2秒以下で1回のみタイマー全回復＆保護）
+        if (gameState.lives === 1 && gameState.timeLeft <= 2.0 && gameState.timeLeft > 0 && !playData.pinchShieldTriggered) {
+            const party = Array.isArray(gameState.equippedParty) ? gameState.equippedParty : [(gameState.equipped || '1'), null, null];
+            const unlockedCount = Number(gameState.unlockedSlots) || 1;
+            let hasShield = false;
+            for (let i = 0; i < unlockedCount; i++) {
+                const cId = party[i];
+                if (!cId || !gameState.charaInventory || !gameState.charaInventory[cId]) continue;
+                const hId = gameState.charaInventory[cId].heldItem;
+                if (!hId || !rawData.heldItems) continue;
+                const hItem = rawData.heldItems.find(it => String(it.id) === String(hId));
+                if (hItem && hItem.special === 'PINCH_SHIELD') {
+                    hasShield = true;
+                    break;
+                }
+            }
+
+            if (hasShield) {
+                playData.pinchShieldTriggered = true;
+                gameState.timeLeft = baseMaxTime;
+                if (bar) bar.style.width = '100%';
+                if (timerText) timerText.innerText = gameState.timeLeft.toFixed(1);
+                playSE('special');
+                if (typeof showCutIn === 'function') {
+                    showCutIn('🛡️ ピンチシールド発動！', '#3b82f6');
+                }
+            }
+        }
+
         if(gameState.timeLeft <= 0) { 
             clearInterval(gameState.timer); 
             if (typeof window.judge === 'function') window.judge(false, null); 
@@ -258,28 +336,86 @@ export function startTimer() {
     }, 100); 
 }
 
-export function getCharaStats() { 
+/**
+ * 戦闘開始時の持ち物特殊効果（INIT_SP_1 など）を適用
+ */
+export function applyBattleStartHeldItemBuffs() {
+    playData.pinchShieldTriggered = false;
+    const party = Array.isArray(gameState.equippedParty) ? gameState.equippedParty : [(gameState.equipped || '1'), null, null];
+    const mainCharId = party[0];
+    if (mainCharId && gameState.charaInventory && gameState.charaInventory[mainCharId]) {
+        const heldItemId = gameState.charaInventory[mainCharId].heldItem;
+        if (heldItemId && rawData.heldItems && rawData.heldItems.length > 0) {
+            const itemData = rawData.heldItems.find(it => String(it.id) === String(heldItemId));
+            if (itemData && itemData.special === 'INIT_SP_1') {
+                playData.currentSP = 1;
+                updateSpUI();
+                return;
+            }
+        }
+    }
+    playData.currentSP = 0;
+    updateSpUI();
+}
+
+export function getCharaStats(options = {}) { 
     let stats = { atk: 1.0, time: 1.0, exp: 1.0 };
+    
+    // スロットごとの適用率（メイン枠: 100%, サブ枠: 20%）。QR対戦・専用モードではメイン枠のみ適用
+    const slotWeights = (options && options.mainOnly) ? [1.0] : [1.0, 0.2, 0.2];
+    const party = Array.isArray(gameState.equippedParty) ? gameState.equippedParty : [(gameState.equipped || '1'), null, null];
+    const unlockedCount = (options && options.mainOnly) ? 1 : (Number(gameState.unlockedSlots) || 1);
+
     if(rawData.characters && rawData.characters.length > 0) {
-        const charaData = rawData.characters.find(c => String(c.id) == String(gameState.equipped));
-        if(charaData) {
-            let userChara = gameState.charaInventory[gameState.equipped] || gameState.charaInventory[charaData.id];
+        slotWeights.forEach((weight, slotIdx) => {
+            if (slotIdx >= unlockedCount) return;
+            const charId = party[slotIdx];
+            if (!charId) return;
+
+            const charaData = rawData.characters.find(c => String(c.id) === String(charId));
+            if (!charaData) return;
+
+            let userChara = (gameState.charaInventory && gameState.charaInventory[charId]) || (gameState.charaInventory && gameState.charaInventory[charaData.id]);
             let level = (userChara && typeof userChara.level === 'number' && userChara.level >= 1) ? userChara.level : 1;
-            let baseVal = (userChara && userChara.isEvolved && userChara.customValue) ? userChara.customValue : Number(charaData.value);
+            let baseVal = (userChara && userChara.isEvolved && userChara.customValue) ? userChara.customValue : Number(charaData.value || 1.0);
             let finalVal = Number(baseVal) + (level * LV_BONUS_RATE);
-            let skills = (userChara && userChara.skills && userChara.skills.length > 0) ? userChara.skills : [charaData.type];
+            let bonusAmount = Math.max(0, finalVal - 1.0); // 1.0からの超過補正量
+
+            let skills = (userChara && userChara.skills && userChara.skills.length > 0) ? userChara.skills : [charaData.type || 'ATK'];
             skills.forEach(type => { 
+                const weightedBonus = bonusAmount * weight;
                 if(type === 'ALL') { 
-                    stats.atk = finalVal; 
-                    stats.time = finalVal; 
-                    stats.exp = finalVal; 
+                    stats.atk += weightedBonus; 
+                    stats.time += weightedBonus; 
+                    stats.exp += weightedBonus; 
                 } else { 
-                    if(type === 'ATK') stats.atk = finalVal; 
-                    if(type === 'TIME') stats.time = finalVal; 
-                    if(type === 'EXP') stats.exp = finalVal; 
+                    if(type === 'ATK') stats.atk += weightedBonus; 
+                    if(type === 'TIME') stats.time += weightedBonus; 
+                    if(type === 'EXP') stats.exp += weightedBonus; 
                 } 
             });
-        }
+
+            // 持ち物（HeldItems）によるステータス加算（メイン100%, サブ各20%）
+            if (userChara && userChara.heldItem && rawData.heldItems && rawData.heldItems.length > 0) {
+                const heldItemData = rawData.heldItems.find(it => String(it.id) === String(userChara.heldItem));
+                if (heldItemData) {
+                    const itemVal = Number(heldItemData.value || 1.0);
+                    const itemBonus = Math.max(0, itemVal - 1.0) * weight;
+                    const itemType = heldItemData.type || 'ATK';
+                    if (itemType === 'ALL') {
+                        stats.atk += itemBonus;
+                        stats.time += itemBonus;
+                        stats.exp += itemBonus;
+                    } else if (itemType === 'ATK') {
+                        stats.atk += itemBonus;
+                    } else if (itemType === 'TIME') {
+                        stats.time += itemBonus;
+                    } else if (itemType === 'EXP') {
+                        stats.exp += itemBonus;
+                    }
+                }
+            }
+        });
     }
     if(gameState.itemLevels && rawData.shopItems) {
         Object.keys(gameState.itemLevels).forEach(itemId => {
@@ -301,6 +437,209 @@ export function getCharaStats() {
     }
 
     return stats;
+}
+
+/**
+ * SP（スキルポイント）を加算しUIを更新
+ */
+export function addSP(amount = 1) {
+    if (typeof playData.currentSP !== 'number') playData.currentSP = 0;
+    const oldSP = playData.currentSP;
+    playData.currentSP = Math.min(3, playData.currentSP + amount);
+    if (playData.currentSP > oldSP) {
+        playSE('special');
+    }
+    updateSpUI();
+}
+
+/**
+ * 戦闘画面のSPゲージと必殺技ボタンの表示を更新
+ */
+export function updateSpUI() {
+    const sp = Math.min(3, Math.max(0, playData.currentSP || 0));
+    for (let i = 1; i <= 3; i++) {
+        const dot = document.getElementById(`sp-dot-${i}`);
+        if (dot) {
+            if (i <= sp) dot.classList.add('active');
+            else dot.classList.remove('active');
+        }
+    }
+
+    const skillBtn = document.getElementById('btn-active-skill');
+    const skillNameEl = document.getElementById('ui-skill-btn-name');
+    const skillAttr = getMainCharaSkillAttribute();
+    
+    const skillNames = {
+        'ATK': 'パワースマッシュ',
+        'TIME': 'タイムリカバリー',
+        'EXP': 'ラッキーボーナス',
+        'ALL': 'ミラクルバースト'
+    };
+
+    if (skillNameEl) {
+        skillNameEl.innerText = skillNames[skillAttr] || '必殺技';
+    }
+
+    if (skillBtn) {
+        skillBtn.className = `active-skill-btn skill-btn-${skillAttr.toLowerCase()}`;
+        if (sp >= 1 && !runtimeState.isFinished && !runtimeState.isPaused && (gameState.lives > 0) && (gameState.timeLeft > 0)) {
+            skillBtn.disabled = false;
+            skillBtn.classList.add('ready');
+        } else {
+            skillBtn.disabled = true;
+            skillBtn.classList.remove('ready');
+        }
+    }
+}
+
+/**
+ * メイン枠キャラクターのステータス比率から必殺技属性を自動判定
+ * (同値トップ: ATK > TIME > EXP, 特殊キャラ/均等: ALL)
+ */
+export function getMainCharaSkillAttribute() {
+    const mainId = (gameState.equippedParty && gameState.equippedParty[0]) ? gameState.equippedParty[0] : (gameState.equipped || '1');
+    const cMaster = rawData.characters ? rawData.characters.find(c => String(c.id) === String(mainId)) : null;
+    if (!cMaster) return 'ATK';
+
+    // ボスまたはスタディエル等の特殊キャラ判定
+    const isBoss = cMaster.category === 'boss' || String(cMaster.id).startsWith('boss_');
+    const isStudyel = cMaster.category === 'studyel' || String(cMaster.id).startsWith('studyel_');
+    if (isBoss || isStudyel) return 'ALL';
+
+    const inv = (gameState.charaInventory && gameState.charaInventory[mainId]) || {};
+    const level = (typeof inv.level === 'number' && inv.level >= 1) ? inv.level : 1;
+    const baseVal = (inv.isEvolved && inv.customValue) ? inv.customValue : Number(cMaster.value || 1.0);
+    const finalVal = Number(baseVal) + (level * LV_BONUS_RATE);
+    const skills = (inv.skills && inv.skills.length > 0) ? inv.skills : [cMaster.type || 'ATK'];
+
+    let stats = { atk: 1.0, time: 1.0, exp: 1.0 };
+    skills.forEach(type => {
+        if (type === 'ALL') {
+            stats.atk = finalVal;
+            stats.time = finalVal;
+            stats.exp = finalVal;
+        } else if (type === 'ATK') {
+            stats.atk = finalVal;
+        } else if (type === 'TIME') {
+            stats.time = finalVal;
+        } else if (type === 'EXP') {
+            stats.exp = finalVal;
+        }
+    });
+
+    // 3値が完全に均等の場合は ALL
+    if (stats.atk === stats.time && stats.time === stats.exp) {
+        return 'ALL';
+    }
+
+    // 部分的な同値トップの解決: ATK > TIME > EXP
+    const maxVal = Math.max(stats.atk, stats.time, stats.exp);
+    if (stats.atk === maxVal) return 'ATK';
+    if (stats.time === maxVal) return 'TIME';
+    if (stats.exp === maxVal) return 'EXP';
+    return 'ATK';
+}
+
+/**
+ * 必殺技（アクティブスキル）を発動
+ */
+export function triggerActiveSkill() {
+    // 【発動の絶対防壁・レースコンディション対策】
+    if (gameState.lives <= 0 || gameState.timeLeft <= 0 || runtimeState.isFinished || runtimeState.isPaused || (playData.currentSP || 0) < 1) {
+        return;
+    }
+
+    // SP消費
+    playData.currentSP -= 1;
+    updateSpUI();
+
+    // タイマー一時停止（二重トリガー・スリップ防止）
+    runtimeState.isPaused = true;
+
+    // メインキャラのレア度減衰レート（UR: 1.0, SSR: 0.8, SR: 0.6, R: 0.4, N: 0.2）
+    const mainId = (gameState.equippedParty && gameState.equippedParty[0]) ? gameState.equippedParty[0] : (gameState.equipped || '1');
+    const cMaster = rawData.characters ? rawData.characters.find(c => String(c.id) === String(mainId)) : null;
+    const inv = (gameState.charaInventory && gameState.charaInventory[mainId]) || {};
+    const rarity = inv.currentRarity || (cMaster ? cMaster.rarity : 'N');
+    const rateMap = { 'UR': 1.0, 'SSR': 0.8, 'SR': 0.6, 'R': 0.4, 'N': 0.2 };
+    const rate = rateMap[rarity] || 0.2;
+
+    const skillAttr = getMainCharaSkillAttribute();
+    const stats = getCharaStats();
+
+    playSE('special');
+
+    // カットイン演出・スキル効果の即時適用（上下2段表示で文字被りを防止）
+    const skillNameMap = {
+        'ATK': 'パワースマッシュ',
+        'TIME': 'タイムリカバリー',
+        'EXP': 'ラッキーボーナス',
+        'ALL': 'ミラクルバースト'
+    };
+    const sName = skillNameMap[skillAttr] || '必殺技';
+
+    let isEnemyDefeated = false;
+    const baseDamage = Math.floor(100 * stats.atk);
+
+    if (skillAttr === 'ATK') {
+        const damage = Math.floor(baseDamage * (2.0 * rate));
+        gameState.enemyHP = Math.max(0, gameState.enemyHP - damage);
+        gameState.score += damage;
+        showSkillCutIn(`⚡ ${sName}！`, `-${damage} HP`, 'damage');
+        const enemyIcon = document.getElementById('ui-enemy-icon');
+        if (enemyIcon) {
+            enemyIcon.classList.remove('shake-anim');
+            void enemyIcon.offsetWidth;
+            enemyIcon.classList.add('shake-anim');
+        }
+        if (!playData.isSurvival && gameState.enemyHP <= 0) {
+            isEnemyDefeated = true;
+        }
+    } else if (skillAttr === 'TIME') {
+        const healTime = (gameState.maxTime || 10) * (1.0 * rate);
+        gameState.timeLeft = Math.min(gameState.maxTime || 10, gameState.timeLeft + healTime);
+        showSkillCutIn(`⚡ ${sName}！`, `+${healTime.toFixed(1)}s`, 'heal');
+    } else if (skillAttr === 'EXP') {
+        const gainedBonus = Math.floor(1000 * rate);
+        playData.bonusExp = (playData.bonusExp || 0) + gainedBonus;
+        showSkillCutIn(`⚡ ${sName}！`, `+${gainedBonus} XP`, 'exp');
+    } else if (skillAttr === 'ALL') {
+        const damage = Math.floor(baseDamage * (1.5 * rate));
+        gameState.enemyHP = Math.max(0, gameState.enemyHP - damage);
+        gameState.score += damage;
+        const healTime = (gameState.maxTime || 10) * (0.5 * rate);
+        gameState.timeLeft = Math.min(gameState.maxTime || 10, gameState.timeLeft + healTime);
+        const gainedBonus = Math.floor(500 * rate);
+        playData.bonusExp = (playData.bonusExp || 0) + gainedBonus;
+        showSkillCutIn(`⚡ ${sName}！`, `-${damage} HP / +${healTime.toFixed(1)}s / +${gainedBonus}XP`, 'all');
+        const enemyIcon = document.getElementById('ui-enemy-icon');
+        if (enemyIcon) {
+            enemyIcon.classList.remove('shake-anim');
+            void enemyIcon.offsetWidth;
+            enemyIcon.classList.add('shake-anim');
+        }
+        if (!playData.isSurvival && gameState.enemyHP <= 0) {
+            isEnemyDefeated = true;
+        }
+    }
+
+    updateUI();
+
+    // 演出完了（約1.5秒後）にタイマー再開、または敵撃破処理
+    setTimeout(() => {
+        if (!runtimeState.isGameActive || runtimeState.isFinished) return;
+        if (isEnemyDefeated) {
+            const enemyBox = document.querySelector('.enemy-visual-box'); 
+            if (enemyBox) { 
+                enemyBox.classList.add('anim-paused'); 
+                enemyBox.classList.add('fade-out'); 
+            } 
+            finishGame(true);
+        } else {
+            runtimeState.isPaused = false;
+            updateSpUI();
+        }
+    }, 1500);
 }
 
 export function finishGame(isClear) { 
@@ -362,8 +701,9 @@ export function finishGame(isClear) {
         if (playData.activeOaths.length === 1) oathMultiplier = 2;
         else if (playData.activeOaths.length >= 2) oathMultiplier = 3;
 
-        const eqInv = gameState.charaInventory[gameState.equipped];
-        const cMaster = rawData.characters ? rawData.characters.find(c => String(c.id) == String(gameState.equipped)) : null;
+        const mainCharaId = (gameState.equippedParty && gameState.equippedParty[0]) ? gameState.equippedParty[0] : (gameState.equipped || '1');
+        const eqInv = gameState.charaInventory[mainCharaId];
+        const cMaster = rawData.characters ? rawData.characters.find(c => String(c.id) == String(mainCharaId)) : null;
         
         let isMax = false;
         if (eqInv && cMaster) {
@@ -534,6 +874,10 @@ export function finishGame(isClear) {
             ? window.StudyelEngine.getXpMultiplier(currentSubject)
             : 1.0;
         earned = Math.floor((partA + partB + partC) * gradeMultiplier * studyelXpMult);
+        
+        // 必殺技（アクティブスキル: ラッキーボーナス等）による蓄積XP合算
+        const skillBonusExp = playData.bonusExp || 0;
+        earned += skillBonusExp;
         
         if (playData.activeReliefs && playData.activeReliefs.length > 0) {
             const rCount = playData.activeReliefs.length;

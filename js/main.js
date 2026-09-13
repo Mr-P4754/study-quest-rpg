@@ -1,4 +1,4 @@
-﻿// ==========================================
+// ==========================================
 // js/main.js (メインエントリーポイント・グローバル公開バインド)
 // ==========================================
 
@@ -30,11 +30,10 @@ import {
     runtimeState,
     initUserId,
     loadSaveData,
-    saveGame,
-    getDefaultStudyelState
-} from './state.js?v=10.2.6';
+    saveGame
+} from './state.js?v=10.5.0';
 
-import * as StudyelEngine from './studyel-engine.js?v=10.2.6';
+import * as StudyelEngine from './studyel-engine.js?v=10.5.0';
 window.StudyelEngine = StudyelEngine;
 
 import {
@@ -51,14 +50,14 @@ import {
     stopBGM,
     playMmlBGM,
     BGM_MML
-} from './utils.js?v=10.2.6';
+} from './utils.js?v=10.5.0';
 
 import {
     uploadData,
     downloadData,
     fetchData,
     cloudSync
-} from './api.js?v=10.2.6';
+} from './api.js?v=10.5.0';
 
 import {
     showCutIn,
@@ -72,8 +71,14 @@ import {
     getCharaStats,
     finishGame,
     handleResultClose,
-    backToTitle
-} from './battle-core.js?v=10.2.6';
+    backToTitle,
+    addSP,
+    updateSpUI,
+    getMainCharaSkillAttribute,
+    triggerActiveSkill,
+    showSkillCutIn,
+    applyBattleStartHeldItemBuffs
+} from './battle-core.js?v=10.5.0';
 
 import {
     startNormalGameCheck,
@@ -108,7 +113,7 @@ import {
     toggleRelief,
     startOathGame,
     startReliefGame
-} from './quest-normal.js?v=10.2.6';
+} from './quest-normal.js?v=10.5.0';
 
 import {
     addRogueLog,
@@ -135,11 +140,18 @@ import {
     startRogueLoop,
     stopRogueLoop,
     resumeRogueLoop
-} from './quest-explore.js?v=10.2.6';
+} from './quest-explore.js?v=10.5.0';
 
 import {
     openGacha,
     closeGacha,
+    openGachaMenu,
+    closeGachaMenu,
+    openZukanMenu,
+    closeZukanMenu,
+    openMixerMenu,
+    closeMixerMenu,
+    updateAllXpDisplays,
     rollGacha,
     rollGuaranteedTenGacha,
     executeGacha,
@@ -147,9 +159,17 @@ import {
     closeGachaResult,
     renderZukan,
     changeZukanSort,
+    switchMixerRarity,
+    renderMixerSlots,
+    renderMixerMaterialList,
+    adjustMixerMaterial,
+    clearMixerSelection,
+    executeMixerSynthesis,
     openCharaDetail,
     closeCharaDetail,
     equipCurrentChara,
+    handleSlotEquip,
+    buySlotPermit,
     useExpItem,
     executeEvolution,
     executeReincarnation,
@@ -168,6 +188,9 @@ import {
     switchShopTab,
     buyItem,
     exchangeBook,
+    renderAvatarShop,
+    buyAvatarItem,
+    AVATAR_SHOP_ITEMS,
     openMissions,
     closeMissions,
     renderMissions,
@@ -182,8 +205,18 @@ import {
     checkTitles,
     checkLoginBonus,
     closeLoginBonus,
-    checkMissionDate
-} from './gacha-shop.js?v=10.2.6';
+    checkMissionDate,
+    rollHeldItemGacha,
+    openHeldItemSelectModal,
+    closeHeldItemSelectModal,
+    equipHeldItem,
+    unequipHeldItem,
+    switchZukanTab,
+    renderHeldItemZukan,
+    getHeldItemAssignedCount,
+    getHeldItemAvailableCount,
+    buyFarmSlotPermit
+} from './gacha-shop.js?v=10.5.0';
 
 import {
     initTitle,
@@ -235,7 +268,20 @@ import {
     GuideModule,
     generateAndDownloadIdCard,
     updateCloudSyncIndicator
-} from './ui-manager.js?v=10.2.6';
+} from './ui-manager.js?v=10.5.0';
+
+import {
+    openFarmMenu,
+    closeFarmMenu,
+    renderFarmUI,
+    openFarmSelectModal,
+    closeFarmSelectModal,
+    assignFarmSlot,
+    removeFarmSlot,
+    openFarmHelp,
+    closeFarmHelp,
+    addFarmExp
+} from './farm-engine.js?v=10.5.0';
 
 import {
     openTeamBattleSetup,
@@ -286,7 +332,7 @@ import {
     stopTbQrScanner,
     setScannedData,
     clearScannedData
-} from './special-quest-engine.js?v=10.2.6';
+} from './special-quest-engine.js?v=10.5.0';
 
 import {
     openAvatarEditor,
@@ -296,8 +342,9 @@ import {
     updateAvatarMsg,
     randomizeAvatar,
     saveAvatarSettings,
-    generateAvatarSvg
-} from './avatar-engine.js?v=10.2.6';
+    generateAvatarSvg,
+    isAvatarPartUnlocked
+} from './avatar-engine.js?v=10.5.0';
 
 // ==========================================
 // インライン onclick / 動的UI互換用 window 一括バインド
@@ -368,6 +415,12 @@ Object.assign(globalScope, {
     finishGame,
     handleResultClose,
     backToTitle,
+    addSP,
+    updateSpUI,
+    getMainCharaSkillAttribute,
+    triggerActiveSkill,
+    showSkillCutIn,
+    applyBattleStartHeldItemBuffs,
 
     // 通常・サバイバル・計算・タイピング・誓約・救済
     startNormalGameCheck,
@@ -429,9 +482,16 @@ Object.assign(globalScope, {
     stopRogueLoop,
     resumeRogueLoop,
 
-    // ガチャ・図鑑・育成・ショップ・実績
+    // ガチャ・図鑑・ミキサー・ショップ・実績
     openGacha,
     closeGacha,
+    openGachaMenu,
+    closeGachaMenu,
+    openZukanMenu,
+    closeZukanMenu,
+    openMixerMenu,
+    closeMixerMenu,
+    updateAllXpDisplays,
     rollGacha,
     rollGuaranteedTenGacha,
     executeGacha,
@@ -439,9 +499,17 @@ Object.assign(globalScope, {
     closeGachaResult,
     renderZukan,
     changeZukanSort,
+    switchMixerRarity,
+    renderMixerSlots,
+    renderMixerMaterialList,
+    adjustMixerMaterial,
+    clearMixerSelection,
+    executeMixerSynthesis,
     openCharaDetail,
     closeCharaDetail,
     equipCurrentChara,
+    handleSlotEquip,
+    buySlotPermit,
     useExpItem,
     executeEvolution,
     executeReincarnation,
@@ -461,6 +529,9 @@ Object.assign(globalScope, {
     buyItem,
     buyShopItem: buyItem,
     exchangeBook,
+    renderAvatarShop,
+    buyAvatarItem,
+    AVATAR_SHOP_ITEMS,
     openMissions,
     closeMissions,
     renderMissions,
@@ -476,6 +547,16 @@ Object.assign(globalScope, {
     checkLoginBonus,
     closeLoginBonus,
     checkMissionDate,
+    rollHeldItemGacha,
+    openHeldItemSelectModal,
+    closeHeldItemSelectModal,
+    equipHeldItem,
+    unequipHeldItem,
+    switchZukanTab,
+    renderHeldItemZukan,
+    getHeldItemAssignedCount,
+    getHeldItemAvailableCount,
+    buyFarmSlotPermit,
 
     // UIマネージャー・モーダル・ガイド
     initTitle,
@@ -587,9 +668,22 @@ Object.assign(globalScope, {
     randomizeAvatar,
     saveAvatarSettings,
     generateAvatarSvg,
+    isAvatarPartUnlocked,
 
     // スタディエル育成エンジン
-    StudyelEngine
+    StudyelEngine,
+
+    // キャラクターファーム（牧場）エンジン
+    openFarmMenu,
+    closeFarmMenu,
+    renderFarmUI,
+    openFarmSelectModal,
+    closeFarmSelectModal,
+    assignFarmSlot,
+    removeFarmSlot,
+    openFarmHelp,
+    closeFarmHelp,
+    addFarmExp
 });
 
 // ==========================================

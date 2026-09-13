@@ -1,4 +1,4 @@
-﻿// ==========================================
+// ==========================================
 // js/quest-explore.js (オープンワールド探索・オトモ連れ歩き統合エンジン Ver 2.2)
 // ==========================================
 
@@ -8,33 +8,33 @@ import {
     rawData,
     rogueData,
     runtimeState,
-    ROGUE_TILES,
     saveGame
-} from './state.js?v=10.2.6';
+} from './state.js?v=10.5.0';
 
 import {
     playSE,
     playBGM,
     isGradeMatch,
     renderSafeImg
-} from './utils.js?v=10.2.6';
+} from './utils.js?v=10.5.0';
 
 import {
     updateUI,
     startCountdown,
     getCharaStats,
-    backToTitle
-} from './battle-core.js?v=10.2.6';
+    backToTitle,
+    updateSpUI
+} from './battle-core.js?v=10.5.0';
 
 import {
     showAppModal,
     showConfirm,
     updateTitleInfo
-} from './ui-manager.js?v=10.2.6';
+} from './ui-manager.js?v=10.5.0';
 
-import { cloudSync } from './api.js?v=10.2.6';
-import { generateAvatarSvg } from './avatar-engine.js?v=10.2.6';
-import { getStudyelSvgDataUri } from './studyel-engine.js?v=10.2.6';
+import { cloudSync } from './api.js?v=10.5.0';
+import { generateAvatarSvg } from './avatar-engine.js?v=10.5.0';
+import { getStudyelSvgDataUri } from './studyel-engine.js?v=10.5.0';
 
 // --- フィールド幾何・ゲームバランス定数 ---
 const MAP_SIZE = 1200;
@@ -75,7 +75,7 @@ let otomoDrawInfo = { type: 'icon', icon: '✏️', img: null };
 // ==========================================
 
 export function getOtomoPassive() {
-    const charId = gameState.equipped;
+    const charId = (gameState.equippedParty && gameState.equippedParty[0]) ? gameState.equippedParty[0] : (gameState.equipped || '1');
     let char = (rawData.characters && rawData.characters.length > 0)
         ? rawData.characters.find(c => String(c.id) === String(charId))
         : null;
@@ -1277,6 +1277,9 @@ export function triggerRogueBattle(isBoss = false, customEnemyChar = null) {
 
     runtimeState.isGameActive = false;
     runtimeState.isPaused = false;
+    playData.currentSP = 0;
+    playData.bonusExp = 0;
+    updateSpUI();
     if (typeof window !== 'undefined' && window.handleTypingInput) {
         document.removeEventListener('keydown', window.handleTypingInput);
     }

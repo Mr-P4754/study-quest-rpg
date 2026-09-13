@@ -1,12 +1,12 @@
-﻿// ============================================================
+// ============================================================
 // js/studyel-engine.js - スタディエル育成システム統合エンジン
 // Ver 3.5 完全無欠・最終確定版
 // ============================================================
 
-import { gameState, rawData, saveGame, playData, rogueData } from './state.js?v=10.2.6';
-import { playSE } from './utils.js?v=10.2.6';
-import { showCutIn } from './battle-core.js?v=10.2.6';
-import { GuideModule } from './ui-manager.js?v=10.2.6';
+import { gameState, rawData, saveGame, playData, rogueData } from './state.js?v=10.5.0';
+import { playSE } from './utils.js?v=10.5.0';
+import { showCutIn } from './battle-core.js?v=10.5.0';
+import { GuideModule } from './ui-manager.js?v=10.5.0';
 
 // ------------------------------------------------------------
 // 定数・設定定義
@@ -513,8 +513,9 @@ export function getTimerBuff() {
     else if (st.stage === 4) buff = 1.5;
     else if (st.stage >= 5) buff = 2.0;
 
-    // 成体スタディエル自身が出撃している場合、固有の解答速度ボーナスも加算
-    if (st.stage >= 4 && st.finalStats && String(gameState.equipped) === String(st.finalStats.formId)) {
+    // 成体スタディエル自身がメイン枠で出撃している場合、固有の解答速度ボーナスも加算
+    const mainCharId = (gameState.equippedParty && gameState.equippedParty[0]) ? gameState.equippedParty[0] : (gameState.equipped || '');
+    if (st.stage >= 4 && st.finalStats && String(mainCharId) === String(st.finalStats.formId)) {
         buff += (st.finalStats.bonusTime || 0.0);
     }
     return buff;
@@ -572,8 +573,9 @@ export function getComboDamageBonus(combo) {
         bonus += fiveCombos * 0.10; // 5コンボごとに+10%
     }
 
-    // 成体スタディエルが出撃している場合、集中力ボーナスも常時上乗せ
-    if (st.finalStats && String(gameState.equipped) === String(st.finalStats.formId)) {
+    // 成体スタディエルがメイン枠で出撃している場合、集中力ボーナスも常時上乗せ
+    const mainCharId = (gameState.equippedParty && gameState.equippedParty[0]) ? gameState.equippedParty[0] : (gameState.equipped || '');
+    if (st.finalStats && String(mainCharId) === String(st.finalStats.formId)) {
         bonus += (st.finalStats.bonusDamage || 0.0);
     }
     return bonus;
@@ -1086,10 +1088,14 @@ export function equipStudyel() {
     const st = gameState.studyel;
     if (!st || st.stage < 4 || !st.finalStats?.formId) return;
 
+    if (!Array.isArray(gameState.equippedParty)) {
+        gameState.equippedParty = ['1', null, null];
+    }
+    gameState.equippedParty[0] = String(st.finalStats.formId);
     gameState.equipped = String(st.finalStats.formId);
     saveGame();
     playSE('win');
-    alert(`『${st.finalStats.name}』を出撃メンバーに選びました！`);
+    alert(`『${st.finalStats.name}』をメイン出撃メンバーに選びました！`);
     closeStudyelRoom();
     if (typeof window.updateTitleInfo === 'function') window.updateTitleInfo();
 }

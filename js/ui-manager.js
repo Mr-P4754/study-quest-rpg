@@ -1,15 +1,14 @@
-﻿// ==========================================
+// ==========================================
 // js/ui-manager.js (カテゴリー遷移・モーダル・プレイガイド・成績表・ギフト)
 // ==========================================
 
 import {
     gameState,
     rawData,
-    dailyMissions,
     runtimeState,
     GUIDE_DATA,
     saveGame
-} from './state.js?v=10.2.6';
+} from './state.js?v=10.5.0';
 
 import {
     getDisplayName,
@@ -18,10 +17,10 @@ import {
     ALL_GRADES,
     isGradeMatch,
     renderSafeImg
-} from './utils.js?v=10.2.6';
+} from './utils.js?v=10.5.0';
 
-import { cloudSync } from './api.js?v=10.2.6';
-import { generateAvatarSvg } from './avatar-engine.js?v=10.2.6';
+import { cloudSync } from './api.js?v=10.5.0';
+import { generateAvatarSvg } from './avatar-engine.js?v=10.5.0';
 
 const SUBJECT_ORDER = [
     '国語', '算数', '数学', '理科', '社会', '英語', '情報',
@@ -410,8 +409,10 @@ export function filterUnits() {
 }
 
 export function updateTitleInfo() {
-    const chara = (rawData.characters && rawData.characters.length > 0) ? rawData.characters.find(c => String(c.id) == String(gameState.equipped)) : null;
-    const inv = gameState.charaInventory[gameState.equipped] || (chara ? gameState.charaInventory[chara.id] : null);
+    const party = Array.isArray(gameState.equippedParty) ? gameState.equippedParty : [(gameState.equipped || '1'), null, null];
+    const mainId = party[0] || '1';
+    const chara = (rawData.characters && rawData.characters.length > 0) ? rawData.characters.find(c => String(c.id) == String(mainId)) : null;
+    const inv = (gameState.charaInventory && gameState.charaInventory[mainId]) || (chara ? gameState.charaInventory[chara.id] : null);
     let lv = (inv && typeof inv.level === 'number' && inv.level >= 1) ? inv.level : 1;
     const displayName = (chara && typeof getDisplayName === 'function') ? getDisplayName(chara, inv) : (chara ? chara.name : "なし");
     const tEquippedName = document.getElementById('title-equipped-name'); 
@@ -420,11 +421,25 @@ export function updateTitleInfo() {
     if(tXp) tXp.innerText = gameState.xp;
     const imgContainer = document.getElementById('title-chara-img');
     if(imgContainer) {
-        if(chara?.imageUrl && (chara.imageUrl.startsWith('http') || chara.imageUrl.startsWith('data:image'))) {
-            imgContainer.innerHTML = renderSafeImg(chara.imageUrl, '✏️', '', 'width:100%;height:100%;object-fit:cover;');
-        } else {
-            imgContainer.innerHTML = `<div style="text-align:center;line-height:40px;">✏️</div>`;
+        // 最大3体のミニアイコン（30px）を並べて表示
+        let iconsHtml = '<div class="title-slot-icons">';
+        for (let slotIdx = 0; slotIdx < 3; slotIdx++) {
+            const isUnlocked = slotIdx < (Number(gameState.unlockedSlots) || 1);
+            const cId = party[slotIdx];
+            const c = cId && rawData.characters ? rawData.characters.find(x => String(x.id) === String(cId)) : null;
+            if (!isUnlocked) {
+                iconsHtml += '<div class="title-slot-mini-box locked" title="未解放スロット">🔒</div>';
+            } else if (c) {
+                const img = (c.imageUrl && (c.imageUrl.startsWith('http') || c.imageUrl.startsWith('data:image')))
+                    ? renderSafeImg(c.imageUrl, '✏️', '', 'width:30px;height:30px;object-fit:cover;border-radius:6px;background:#fff;')
+                    : '<div class="title-slot-mini-fallback">✏️</div>';
+                iconsHtml += `<div class="title-slot-mini-box ${slotIdx === 0 ? 'main-slot' : 'sub-slot'}" title="${slotIdx === 0 ? 'メイン' : 'サブ' + slotIdx}: ${c.name}">${img}</div>`;
+            } else {
+                iconsHtml += '<div class="title-slot-mini-box empty" title="空きスロット">空</div>';
+            }
         }
+        iconsHtml += '</div>';
+        imgContainer.innerHTML = iconsHtml;
     }
     
     const rBadge = document.getElementById('revenge-badge'); 

@@ -17,12 +17,12 @@
     <link rel="icon" href="./icons/icon-192.svg">
     <link rel="apple-touch-icon" href="./icons/icon-192.svg">
     <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/base.css?v=10.2.6">
-    <link rel="stylesheet" href="css/layout.css?v=10.2.6">
-    <link rel="stylesheet" href="css/components.css?v=10.2.6">
-    <link rel="stylesheet" href="css/quests.css?v=10.2.6">
-    <link rel="stylesheet" href="css/special-quest.css?v=10.2.6">
-    <link rel="stylesheet" href="css/studyel.css?v=10.2.6">
+    <link rel="stylesheet" href="css/base.css?v=10.5.0">
+    <link rel="stylesheet" href="css/layout.css?v=10.5.0">
+    <link rel="stylesheet" href="css/components.css?v=10.5.0">
+    <link rel="stylesheet" href="css/quests.css?v=10.5.0">
+    <link rel="stylesheet" href="css/special-quest.css?v=10.5.0">
+    <link rel="stylesheet" href="css/studyel.css?v=10.5.0">
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script>
         window.addEventListener('error', function(e) {
@@ -52,7 +52,7 @@
         <div id="campaign-text" class="campaign-text"></div>
     </div>
     <div class="title-logo">STUDY QUEST</div>
-    <div class="version-text" onclick="openVersionHistory()">Ver 10.2.6</div>
+    <div class="version-text" onclick="openVersionHistory()">Ver 10.5.0</div>
     
     <div id="title-news-banner" class="title-news-banner hidden" onclick="openCategory('special')">
         <span id="title-news-badge" class="title-news-badge">NEW!</span>
@@ -69,8 +69,8 @@
             <div class="rich-btn-desc">大量XP獲得！ローグライクやタイムアタック！</div>
         </button>
         <button class="rich-menu-btn border-left-orange" onclick="openCategory('gacha')">
-            <div class="rich-btn-title">💎 ガチャ・図鑑</div>
-            <div class="rich-btn-desc">XPを使って新たな文房具キャラをゲット！</div>
+            <div class="rich-btn-title">💎 ガチャ・合成・図鑑</div>
+            <div class="rich-btn-desc">ガチャ・ミキサー合成・キャラ図鑑・ショップ！</div>
         </button>
         <button class="rich-menu-btn border-left-green" onclick="openCategory('achievement')">
             <div class="rich-btn-title rich-btn-flex-title">🏆 実績・ギフト <div id="badge-achievement" class="badge hidden rich-btn-inline-badge">!</div></div>
@@ -156,18 +156,30 @@
     </div>
 </div>
 
-<!-- カテゴリー：ガチャ・図鑑 -->
+<!-- カテゴリー：ガチャ・図鑑・ショップ -->
 <div id="cat-gacha-overlay" class="overlay overlay-z220 hidden">
     <div class="modal modal-w450">
-        <h2 class="text-orange mt-0">💎 ガチャ・図鑑</h2>
+        <h2 class="text-orange mt-0">💎 ガチャ・合成・図鑑</h2>
         <div class="sub-menu-grid">
-            <button class="rich-menu-btn" onclick="openGacha();">
-                <div class="rich-btn-title">💎 ガチャ＆図鑑</div>
-                <div class="rich-btn-desc">XPを消費して新たなキャラをゲット・確認！</div>
+            <button class="rich-menu-btn" onclick="openGachaMenu();">
+                <div class="rich-btn-title">💎 ガチャ</div>
+                <div class="rich-btn-desc">XPを消費して新たなキャラを召喚！</div>
+            </button>
+            <button class="rich-menu-btn" onclick="openMixerMenu();">
+                <div class="rich-btn-title">🧪 ミキサー合成</div>
+                <div class="rich-btn-desc">同レア10体合成で上位レアキャラ生成！</div>
+            </button>
+            <button class="rich-menu-btn" onclick="openZukanMenu();">
+                <div class="rich-btn-title">📖 キャラ図鑑</div>
+                <div class="rich-btn-desc">獲得キャラの一覧・詳細・強化・売却！</div>
             </button>
             <button class="rich-menu-btn" onclick="openShop();">
                 <div class="rich-btn-title">🛒 ショップ</div>
-                <div class="rich-btn-desc">アイテム交換・学習アイテム購入！</div>
+                <div class="rich-btn-desc">育成アイテムや限定アバターパーツを購入！</div>
+            </button>
+            <button class="rich-menu-btn" onclick="openFarmMenu();">
+                <div class="rich-btn-title">🏡 キャラファーム</div>
+                <div class="rich-btn-desc">キャラを預けてクイズ正解でEXP育成！</div>
             </button>
         </div>
         <button class="menu-btn mt-20 btn-gray" onclick="closeCategory('gacha')">閉じる</button>
@@ -542,6 +554,24 @@
     <div class="battle-area">
         <div class="enemy-visual-box"><div class="enemy-visual" id="ui-enemy-icon">👾</div></div>
         <div class="enemy-stats-row"><div id="ui-enemy-name">BOSS</div><div class="enemy-hp-frame"><div id="ui-hp" class="enemy-hp-fill"></div><div id="ui-hp-text">1000 / 1000</div></div></div>
+        
+        <!-- SPゲージ & 必殺技（アクティブスキル）発動バー -->
+        <div id="sp-skill-container" class="sp-skill-container">
+            <div class="sp-gauge-group">
+                <span class="sp-label">SP</span>
+                <div class="sp-slots-track">
+                    <div id="sp-dot-1" class="sp-slot-dot"></div>
+                    <div id="sp-dot-2" class="sp-slot-dot"></div>
+                    <div id="sp-dot-3" class="sp-slot-dot"></div>
+                </div>
+            </div>
+            <button id="btn-active-skill" class="active-skill-btn" onclick="triggerActiveSkill()" disabled>
+                <span class="skill-icon">⚡</span>
+                <span id="ui-skill-btn-name" class="skill-name">必殺技</span>
+                <span class="skill-cost-badge">SP 1</span>
+            </button>
+        </div>
+
         <div id="ui-question" class="question-box question-box-wrap">READY?</div>
         
         <div id="ui-typing-area" class="typing-area hidden">
@@ -599,15 +629,19 @@
         </div>
         <div id="mission-list" class="mission-list modal-scroll-area"></div><button class="menu-btn mt-20 btn-gray" onclick="closeMissions()">閉じる</button></div></div>
 
-<div id="gacha-overlay" class="overlay overlay-z250 hidden">
+<!-- ガチャ専用モーダル -->
+<div id="gacha-menu-overlay" class="overlay overlay-z250 hidden">
     <div class="modal modal-w500">
         <div class="modal-header-row-lg">
-            <h2 class="text-purple m-0">文房具図鑑 & ガチャ</h2>
-            <button class="help-btn" onclick="GuideModule.open('gacha')">❓</button>
+            <div class="flex items-center gap-10">
+                <h2 class="text-purple m-0">💎 ガチャ</h2>
+                <button class="help-btn" onclick="GuideModule.open('gacha')">❓</button>
+            </div>
+            <button class="nav-pill-btn btn-zukan-link" onclick="openZukanMenu()">📖 図鑑へ ➔</button>
         </div>
         <div class="gacha-panel">
             <div class="modal-header-row-sm mb-10">
-                <span class="font-bold text-dark">所持XP: <span id="gacha-xp" class="text-orange">0</span></span>
+                <span class="font-bold text-dark">所持XP: <span id="gacha-menu-xp" class="text-orange">0</span></span>
             </div>
             <div class="modal-btn-grid-sm">
                 <button onclick="rollGacha(1)" class="gacha-btn-base gacha-btn-single">💎 3,000 XP<br><span class="gacha-btn-sub">通常 1回</span></button>
@@ -616,15 +650,191 @@
                 <button onclick="rollGuaranteedTenGacha('UR', 150000)" class="gacha-btn-base gacha-btn-ur">🌈 150,000 XP<br><span class="gacha-btn-sub">UR確定 10連</span></button>
             </div>
         </div>
-        <div class="text-right mb-5">
-            <select id="zukan-sort-select" aria-label="図鑑の並び順を選択" class="select-box zukan-sort-box" onchange="changeZukanSort()">
-                <option value="default">標準 (ID順)</option><option value="rarity_desc">レア度 (高い順)</option>
-                <option value="rarity_asc">レア度 (低い順)</option><option value="type">スキル属性順</option>
-                <option value="level">レベル順</option><option value="stock">在庫数順</option>
-            </select>
+        
+        <!-- 持ち物ガチャパネル -->
+        <div class="gacha-panel mt-15">
+            <div class="modal-header-row-sm mb-10">
+                <span class="font-bold text-dark">🧰 持ち物ガチャ</span>
+                <span class="text-xs text-gray">装備アイテムでステータス強化！</span>
+            </div>
+            <div class="modal-btn-grid-sm">
+                <button onclick="rollHeldItemGacha(1)" class="gacha-btn-base gacha-btn-helditem">🧰 2,000 XP<br><span class="gacha-btn-sub">持ち物 1回</span></button>
+                <button onclick="rollHeldItemGacha(10)" class="gacha-btn-base gacha-btn-helditem">🧰 20,000 XP<br><span class="gacha-btn-sub">持ち物 10連</span></button>
+            </div>
+        </div>
+
+        <!-- ミキサー合成への誘導バナー -->
+        <div class="mixer-banner-container mt-15">
+            <button class="mixer-banner-btn" onclick="openMixerMenu()">
+                <div class="mixer-banner-icon">🧪</div>
+                <div class="mixer-banner-text">
+                    <div class="mixer-banner-title">ミキサー合成室</div>
+                    <div class="mixer-banner-desc">重複したキャラ10体を上位レア1体に合成！</div>
+                </div>
+                <div class="mixer-banner-arrow">➔</div>
+            </button>
+        </div>
+
+        <button class="menu-btn mt-20 btn-gray" onclick="closeGachaMenu()">閉じる</button>
+    </div>
+</div>
+
+<!-- 図鑑専用モーダル -->
+<div id="zukan-overlay" class="overlay overlay-z250 hidden">
+    <div class="modal modal-w500">
+        <div class="modal-header-row-lg">
+            <div class="flex items-center gap-10">
+                <h2 id="zukan-modal-title" class="text-purple m-0">📖 図鑑</h2>
+                <button class="help-btn" onclick="GuideModule.open('gacha')">❓</button>
+            </div>
+            <button class="nav-pill-btn btn-gacha-link" onclick="openGachaMenu()">💎 ガチャへ ➔</button>
+        </div>
+
+        <!-- 図鑑表示切り替えタブ -->
+        <div class="zukan-tab-group">
+            <button id="zukan-tab-chara" class="zukan-tab-btn active" onclick="switchZukanTab('chara')">👥 キャラクター</button>
+            <button id="zukan-tab-helditem" class="zukan-tab-btn" onclick="switchZukanTab('helditem')">🧰 持ち物</button>
+        </div>
+
+        <div class="modal-header-row-sm mb-10">
+            <span class="font-bold text-dark">所持XP: <span id="zukan-xp" class="text-orange">0</span></span>
+            <div>
+                <select id="zukan-sort-select" aria-label="図鑑の並び順を選択" class="select-box zukan-sort-box" onchange="changeZukanSort()">
+                    <option value="default">標準 (ID順)</option><option value="rarity_desc">レア度 (高い順)</option>
+                    <option value="rarity_asc">レア度 (低い順)</option><option value="type">スキル属性順</option>
+                    <option value="level">レベル順</option><option value="stock">在庫数順</option>
+                </select>
+            </div>
         </div>
         <div id="zukan-grid" class="modal-scroll-area text-left"></div>
-        <button class="menu-btn mt-20 btn-gray" onclick="closeGacha()">閉じる</button>
+        <div id="helditem-zukan-grid" class="modal-scroll-area text-left hidden"></div>
+        <button class="menu-btn mt-20 btn-gray" onclick="closeZukanMenu()">閉じる</button>
+    </div>
+</div>
+
+<!-- ミキサー合成モーダル -->
+<div id="mixer-overlay" class="overlay overlay-z250 hidden">
+    <div class="modal modal-w500">
+        <div class="modal-header-row-lg">
+            <div class="flex items-center gap-10">
+                <h2 class="text-orange m-0">🧪 ミキサー合成</h2>
+                <button class="help-btn" onclick="GuideModule.open('gacha')">❓</button>
+            </div>
+            <button class="nav-pill-btn btn-gacha-link" onclick="openGachaMenu()">💎 ガチャへ ➔</button>
+        </div>
+        <div class="modal-header-row-sm mb-10">
+            <span class="text-sm text-dark font-bold">同レア10体 ➔ 1ランク上位1体生成！</span>
+            <span class="font-bold text-dark">所持XP: <span id="mixer-xp" class="text-orange">0</span></span>
+        </div>
+
+        <!-- レアリティ選択タブ（N, R, SR, SSRの4種） -->
+        <div class="mixer-tabs mb-10">
+            <button id="mixer-tab-N" class="mixer-tab active" onclick="switchMixerRarity('N')">N 素材</button>
+            <button id="mixer-tab-R" class="mixer-tab" onclick="switchMixerRarity('R')">R 素材</button>
+            <button id="mixer-tab-SR" class="mixer-tab" onclick="switchMixerRarity('SR')">SR 素材</button>
+            <button id="mixer-tab-SSR" class="mixer-tab" onclick="switchMixerRarity('SSR')">SSR 素材</button>
+        </div>
+
+        <!-- 投入スロット（10枠） -->
+        <div class="mixer-slots-wrap mb-10">
+            <div class="mixer-slots-header">
+                <span>投入スロット (<span id="mixer-selected-count">0</span> / 10体)</span>
+                <button class="btn-clear-mixer" onclick="clearMixerSelection()">全解除</button>
+            </div>
+            <div id="mixer-slots-grid" class="mixer-slots-grid">
+                <!-- JSで10個のスロットサークルを描画 -->
+            </div>
+        </div>
+
+        <!-- 選択可能な素材キャラ一覧 -->
+        <div class="mixer-materials-header mb-5">
+            <span class="text-xs text-navy font-bold">▼ 投入する余剰キャラを選択（クリックで増減）</span>
+        </div>
+        <div id="mixer-material-list" class="mixer-material-list modal-scroll-area"></div>
+
+        <!-- 合成実行フッター -->
+        <div class="mixer-footer mt-15">
+            <button id="btn-mixer-execute" class="menu-btn btn-orange w-full" disabled onclick="executeMixerSynthesis()">
+                🧪 合成を実行する（10体必要）
+            </button>
+            <button class="menu-btn mt-10 btn-gray" onclick="closeMixerMenu()">閉じる</button>
+        </div>
+    </div>
+</div>
+
+<!-- キャラクターファーム（牧場）モーダル -->
+<div id="farm-overlay" class="overlay overlay-z250 hidden">
+    <div class="modal farm-modal">
+        <!-- ヘッダー -->
+        <div class="modal-header-row-lg">
+            <div class="flex items-center gap-10">
+                <h2 class="text-green m-0">🏡 キャラクターファーム</h2>
+                <button class="help-btn" onclick="openFarmHelp()">❓</button>
+            </div>
+            <button class="modal-close-icon" onclick="closeFarmMenu()">✕</button>
+        </div>
+
+        <!-- ステータスバー（解放枠・預け数・通算お世話回数） -->
+        <div id="farm-status-info" class="farm-status-bar"></div>
+
+        <!-- 牧場ビジュアルエリア（上部草原・浮遊待機アニメーション） -->
+        <div id="farm-pasture-area" class="farm-pasture-container"></div>
+
+        <!-- スロット見出し -->
+        <div class="farm-slots-section-title">
+            <span>🐾 預け入れスロット一覧</span>
+            <small class="text-gray">（クイズ1問正解ごとにEXP自動分配）</small>
+        </div>
+
+        <!-- スロットグリッドエリア（下部スクロール） -->
+        <div id="farm-slots-grid" class="farm-slots-grid modal-scroll-area"></div>
+
+        <!-- フッター -->
+        <div class="farm-modal-footer mt-10">
+            <button class="menu-btn btn-gray w-full" onclick="closeFarmMenu()">閉じる</button>
+        </div>
+    </div>
+</div>
+
+<!-- キャラクター預け入れ選択モーダル -->
+<div id="farm-select-overlay" class="overlay overlay-z350 hidden">
+    <div class="modal modal-w450">
+        <div class="modal-header-row-sm">
+            <h3 id="farm-select-slot-title" class="m-0 text-orange">スロットに預けるキャラを選択</h3>
+            <button class="modal-close-icon" onclick="closeFarmSelectModal()">✕</button>
+        </div>
+        <p class="text-xs text-gray mt-5 mb-10">※預けている間も出撃パーティやチームバトルで使用可能です。ミキサー合成や売却からは保護されます。</p>
+        <div id="farm-select-chara-list" class="farm-select-grid modal-scroll-area"></div>
+        <button class="menu-btn mt-15 btn-gray w-full" onclick="closeFarmSelectModal()">キャンセル</button>
+    </div>
+</div>
+
+<!-- ファームヘルプモーダル -->
+<div id="farm-help-modal" class="overlay overlay-z400 hidden">
+    <div class="modal modal-w400">
+        <div class="modal-header-row-sm">
+            <h3 class="m-0 text-green">🏡 ファームの遊び方</h3>
+            <button class="modal-close-icon" onclick="closeFarmHelp()">✕</button>
+        </div>
+        <div class="modal-scroll-area text-left p-10 font-sm">
+            <h4 class="text-orange mt-0 mb-5">① キャラクターを預ける</h4>
+            <p class="mt-0 text-xs leading-relaxed">空きスロットの「➕ キャラを預ける」から所持キャラクターを選んで預けることができます（出撃中や編成中のキャラも預けられます）。</p>
+            
+            <h4 class="text-orange mt-10 mb-5">② クイズ正解でEXPを分配！</h4>
+            <p class="mt-0 text-xs leading-relaxed">通常クエスト・ランダム演習・タイピング・チームバトルで<b>1問正解するごと</b>に、預けている全キャラクターへ経験値が自動で分配されます。<br>
+            問題の学年が高いほど、より多くのEXP（1.0 × 0.65〜1.85倍）を獲得できます！<br>
+            <small class="text-gray">※サバイバルモードと計算クエストは対象外です。</small></p>
+
+            <h4 class="text-orange mt-10 mb-5">③ レベルMAX後のストック還元</h4>
+            <p class="mt-0 text-xs leading-relaxed">レアリティの上限レベルに達したキャラクターは、その後もEXPが100蓄積するごとに<b>余剰ストック（所持数）が +1 還元</b>されます！限界突破や進化の素材集めにも最適です。</p>
+
+            <h4 class="text-orange mt-10 mb-5">④ スロットの拡張</h4>
+            <p class="mt-0 text-xs leading-relaxed">初期3枠から、ショップの「学習アイテム」タブで「ファーム拡張許可証」を購入することで、最大10枠まで拡張できます。</p>
+
+            <h4 class="text-orange mt-10 mb-5">⑤ キャラクターとのふれあい</h4>
+            <p class="mt-0 text-xs leading-relaxed">上部の牧場をタップすると、ハート演出や応援リアクションをしてくれます💖</p>
+        </div>
+        <button class="menu-btn mt-15 btn-green w-full" onclick="closeFarmHelp()">わかりました！</button>
     </div>
 </div>
 
@@ -645,14 +855,44 @@
                 <div class="detail-stat-row"><span>在庫数</span><span id="cd-stock" class="font-bold">0個</span></div>
             </div>
             <p id="cd-desc" class="chara-desc-box">説明文</p>
-            <div class="detail-btn-row modal-btn-grid mt-15">
-                <button id="btn-equip" class="detail-btn btn-equip-action" onclick="equipCurrentChara()">🛡️ このキャラを装備</button>
+            
+            <!-- 持ち物（装備アイテム）枠 -->
+            <div class="helditem-section">
+                <div class="helditem-section-header">
+                    <div class="helditem-section-title">🧰 持ち物（装備アイテム）</div>
+                    <div id="cd-helditem-action-wrap" class="helditem-btn-group"></div>
+                </div>
+                <div id="cd-helditem-card" class="helditem-slot-card"></div>
+            </div>
+
+            <div class="equip-slot-section mt-15">
+                <div class="equip-slot-title">⚔️ 装備スロット設定</div>
+                <div class="equip-slot-buttons">
+                    <button id="btn-equip-slot-0" class="slot-equip-btn slot-main" onclick="handleSlotEquip(0)">🛡️ メイン</button>
+                    <button id="btn-equip-slot-1" class="slot-equip-btn slot-sub" onclick="handleSlotEquip(1)">🗡️ サブ1</button>
+                    <button id="btn-equip-slot-2" class="slot-equip-btn slot-sub" onclick="handleSlotEquip(2)">🗡️ サブ2</button>
+                </div>
+            </div>
+            <div class="detail-btn-row modal-btn-grid mt-10">
                 <button id="btn-enhance" class="detail-btn btn-enhance-action" onclick="openEnhanceMenu()">🔥 強化合成</button>
                 <button id="btn-sell" class="detail-btn btn-sell-action" onclick="sellCharaStock()">💰 素材売却</button>
             </div>
             <div id="evo-container" class="evo-btn-container hidden mt-10"></div>
             <button class="menu-btn mt-20 btn-light-gray-action" onclick="closeCharaDetail()">閉じる</button>
         </div>
+    </div>
+</div>
+
+<!-- 持ち物選択モーダル -->
+<div id="helditem-select-overlay" class="overlay overlay-z350 hidden">
+    <div class="modal modal-w350">
+        <div class="modal-header-row-sm">
+            <h3 class="m-0 text-dark">🧰 持ち物を選択</h3>
+            <button class="help-btn" onclick="GuideModule.open('gacha')">❓</button>
+        </div>
+        <p class="text-xs text-gray mt-5 mb-10">装備させたい持ち物を選んでください</p>
+        <div id="helditem-select-list" class="helditem-select-list"></div>
+        <button class="menu-btn mt-15 btn-light-gray-action w-full" onclick="closeHeldItemSelectModal()">閉じる</button>
     </div>
 </div>
 
@@ -669,7 +909,27 @@
 </div>
 
 <div id="gacha-result-overlay" class="overlay overlay-z350 hidden"><div class="modal modal-w400"><div id="gr-container"></div><button class="menu-btn mt-20" onclick="closeGachaResult()">OK</button></div></div>
-<div id="shop-overlay" class="overlay overlay-z250 hidden"><div class="modal"><h2 class="text-green">🛒 学習アイテム</h2><div class="text-right">所持XP: <span id="shop-xp">0</span></div><div id="shop-list" class="modal-scroll-area"></div><button class="menu-btn mt-20" onclick="closeShop()">閉じる</button></div></div>
+<div id="shop-overlay" class="overlay overlay-z250 hidden">
+    <div class="modal modal-w500">
+        <div class="modal-header-row-lg">
+            <h2 class="text-green m-0">🛒 SQ ショップ</h2>
+            <button class="help-btn" onclick="GuideModule.open('system')">❓</button>
+        </div>
+        <div class="modal-header-row-sm mb-10">
+            <span class="font-bold text-dark">所持XP: <span id="shop-xp" class="text-orange">0</span></span>
+        </div>
+        <!-- ショップタブ（アイテム / アバター） -->
+        <div class="item-tabs mb-10">
+            <button id="shop-tab-item" class="item-tab active" onclick="switchShopTab('item')">🎒 育成アイテム</button>
+            <button id="shop-tab-avatar" class="item-tab" onclick="switchShopTab('avatar')">🎨 アバターパーツ</button>
+        </div>
+        <!-- アイテムリスト -->
+        <div id="shop-list" class="modal-scroll-area"></div>
+        <!-- アバターアイテムリスト -->
+        <div id="avatar-shop-list" class="modal-scroll-area hidden"></div>
+        <button class="menu-btn mt-20 btn-gray" onclick="closeShop()">閉じる</button>
+    </div>
+</div>
 
 <div id="gift-overlay" class="overlay overlay-z350 hidden">
     <div class="modal modal-w400">
@@ -964,7 +1224,25 @@
     <div class="modal modal-w500">
         <h2 class="text-blue mt-0">📋 更新履歴</h2>
         <div class="version-list version-list-box">
-            <h4>Ver 10.2.6（最新安定版：モバイル探索操作をジョイスティックのみに一本化）</h4>
+            <h4>Ver 10.5.0（最新：持ち物（装備アイテム）システム・持ち物ガチャ新登場）</h4>
+            <ul>
+                <li>🧰 <b>キャラクター持ち物機能（HeldItems）</b>: キャラクターごとに1つ装備可能な「持ち物」システムが実装！ATK・制限時間・獲得経験値の向上に加え、開幕SP付与や時間切れ直前シールドなどの強力な特殊効果を付加できます。</li>
+                <li>📦 <b>持ち物ガチャ新設</b>: XPを消費して新たな持ち物を獲得できる専用ガチャ（1回 2,000 XP / 10連 20,000 XP）がガチャ画面に登場！</li>
+                <li>📖 <b>持ち物図鑑タブ新設</b>: 図鑑モーダルでキャラクター図鑑と持ち物図鑑をワンタップで切り替え、全アイテムの効果や所持状況を確認可能に。</li>
+            </ul>
+            <h4>Ver 10.4.1（複数装備スロット・必殺技スキル・キャラクターファーム・演出最適化）</h4>
+            <ul>
+                <li>⚔️ <b>複数キャラクター装備枠開放（最大3枠）</b>: メイン1体＋サブ2体の最大3体同時装備に対応！サブ枠キャラのステータス効果（ATK/TIME/EXP）もパーティ戦力へ合算反映。</li>
+                <li>⚡ <b>必殺技（アクティブスキル）＆2段カットイン演出</b>: 正解コンボでSPを蓄積し、大迫力の必殺技を発動可能に！技名と効果値を上下2段に分割し、抜群の爽快感と読みやすさを両立。</li>
+                <li>🏡 <b>キャラクターファーム（牧場）システム</b>: 所持キャラを預けてクイズ正解でEXPを分配育成！可愛い待機アニメーションやタップリアクションを完備。</li>
+            </ul>
+            <h4>Ver 10.3.0（アバターショップ・ミキサー合成・図鑑独立）</h4>
+            <ul>
+                <li>🎨 <b>アバターパーツショップ新設</b>: ショップにアバタータブが新登場！ウルフカットやナイトアーマー、猫耳や眼帯など全13種の新パーツ・新カラーをXPで購入可能に。</li>
+                <li>🧪 <b>ミキサー合成ガチャ</b>: 余剰在庫のキャラ10体をミキサーで合成し、1ランク上位のキャラを必ず1体生成！SSR10体で夢のURキャラも確定召喚可能。</li>
+                <li>📖 <b>ガチャと図鑑の完全分離</b>: ガチャ画面と文房具キャラ図鑑を独立したUIへ最適化。ヘッダーのリンクボタンで素早く相互移動できます。</li>
+            </ul>
+            <h4>Ver 10.2.6（モバイル探索操作をジョイスティックのみに一本化）</h4>
             <ul>
                 <li>🕹️ <b>モバイル操作の適正化</b>: スマホやタブレットなどのモバイル端末において、意図しない画面タップ・タッチによる誤移動・操作ミスを防止するため、画面タッチ直接移動を廃止し、移動を「バーチャルアナログジョイスティック操作」のみに一本化。</li>
             </ul>
@@ -1274,12 +1552,15 @@
     </div>
 </div>
 
-<script type="module" src="js/main.js?v=10.2.6"></script>
+<script type="module" src="js/main.js?v=10.5.0"></script>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('./sw.js', { scope: './' })
-                .then((reg) => console.log('[PWA] ServiceWorker 登録完了:', reg.scope))
+                .then((reg) => {
+                    console.log('[PWA] ServiceWorker 登録完了:', reg.scope);
+                    reg.update();
+                })
                 .catch((err) => console.warn('[PWA] ServiceWorker 登録失敗:', err));
         });
     }
